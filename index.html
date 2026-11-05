@@ -1272,7 +1272,7 @@ const POOL=48,pool=[];
 function initLabels(){const L=$('#labels');for(let i=0;i<POOL;i++){const d=document.createElement('div');d.className='lbl';d._i=-1;d._m='';L.appendChild(d);pool.push(d)}}
 function updateLabels(){if(!pool.length)return;const gs=GS(),n=G.n,zb=clamp((baseDist-camDist)/3.5,0,1),hov=G.hover,adj=hov>=0?G.adj[hov]:null,sel=curNote&&G.idx.has(curNote)?G.idx.get(curNote):-1,fade=U?U.uFade.value:0;
   const c=[];for(let i=0;i<n;i++){const d=G.sd[i];if(d>.78)continue;let o;const forced=i===hov||(adj&&adj.has(i))||i===sel||(G.match&&G.match.size<=24&&G.match.has(G.ids[i]));
-    if(forced)o=1-d*.45;else o=clamp(gs.labels*1.25+zb*.65-d*2.3,0,1)*(hov>=0?.2:1);o*=Math.min(1,G.alpha[i]*1.2)*fade;if(o>.04)c.push([o,i])}
+    if(forced)o=1-d*.45;else o=clamp(gs.labels*1.25+zb*.65-d*2.3,0,1)*(hov>=0?.2:1);o*=Math.min(1,G.alpha[i]*1.2)*fade*Math.min(1,gs.labels*10);if(o>.04)c.push([o,i])}
   c.sort((a,b)=>b[0]-a[0]);const m=Math.min(c.length,POOL);
   for(let k=0;k<POOL;k++){const el=pool[k];if(k<m){const o=c[k][0],i=c[k][1],hl=i===hov||i===sel;const mode=(hl?'h':'n')+i;
       if(el._m!==mode){el._m=mode;if(hl){const p=folderPath(G.fids[i]).join(' / ');el.innerHTML=`<span>${esc(G.titles[i])}</span>${p?`<small>${esc(p)}</small>`:''}`}else el.textContent=G.titles[i];el.classList.toggle('hl',hl)}
