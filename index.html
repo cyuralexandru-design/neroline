@@ -514,7 +514,7 @@ input[type=range]:active::-webkit-slider-thumb{transform:scale(1.15)}
     <div class="gsec open"><button class="gsec-h">Forțe<span class="chev" data-ic="chev"></span></button><div class="kids"><div class="inner"><div class="wrap">
       <label class="set-col"><span class="top">Forța centrală<output data-out="graph.center"></output></span><input type="range" min="0" max="1" step="0.01" data-set="graph.center" data-fmt="%"></label>
       <label class="set-col"><span class="top">Forța de respingere<output data-out="graph.repel"></output></span><input type="range" min="0.2" max="3" step="0.05" data-set="graph.repel" data-fmt="x"></label>
-      <label class="set-col"><span class="top">Forța legăturilor<output data-out="graph.linkForce"></output></span><input type="range" min="0" max="3" step="0.05" data-set="graph.linkForce" data-fmt="x"></label>
+      <label class="set-col"><span class="top">Forța legăturilor<output data-out="graph.linkForce"></output></span><input type="range" min="0" max="1" step="0.01" data-set="graph.linkForce" data-fmt="%"></label>
       <label class="set-col"><span class="top">Distanța legăturilor<output data-out="graph.linkDist"></output></span><input type="range" min="0.2" max="3" step="0.05" data-set="graph.linkDist" data-fmt="x"></label>
       <label class="set-col"><span class="top">Grupare pe foldere<output data-out="graph.groupForce"></output></span><input type="range" min="0" max="3" step="0.05" data-set="graph.groupForce" data-fmt="x"></label>
       <button class="btn wide" id="relayout" style="margin-top:6px">Rearanjează nodurile</button>
@@ -1026,9 +1026,9 @@ function simulate(list,E,anchors,prev,gs){
   for(let i=0;i<n;i++){const pv=prev&&prev.get(list[i].id);if(pv){P[i*3]=pv[0];P[i*3+1]=pv[1];P[i*3+2]=pv[2];warm++}
     else{const r=rng(hash(list[i].id)),a=anchors[i];const v=norm([a[0]+(r()-.5)*.5,a[1]+(r()-.5)*.5,a[2]+(r()-.5)*.5]);P[i*3]=v[0];P[i*3+1]=v[1];P[i*3+2]=v[2]}}
   const k=Math.sqrt(4*Math.PI/Math.max(n,1))*.75;const its=warm===n?80:warm>0?170:280;let temp=warm===n?.05:.18;const cool=Math.pow(.004/temp,1/its);
-  const D=new Float32Array(n*3),rep=Math.pow(gs.repel,1.6),lf=gs.linkForce,gf=gs.groupForce,Lr=Math.max(0,(gs.linkDist-.5)*k*.6);
+  const D=new Float32Array(n*3),rep=Math.pow(gs.repel,1.6),lf=Math.min(1,gs.linkForce),gf=gs.groupForce,Lr=Math.max(0,(gs.linkDist-.5)*k*.6),AD=new Set();E.forEach(e=>{AD.add(e.ia*n+e.ib);AD.add(e.ib*n+e.ia)});
   for(let it=0;it<its;it++){D.fill(0);
-    for(let i=0;i<n;i++){const ix=i*3,px=P[ix],py=P[ix+1],pz=P[ix+2];for(let j=i+1;j<n;j++){const jx=j*3,dx=px-P[jx],dy=py-P[jx+1],dz=pz-P[jx+2];const d2=dx*dx+dy*dy+dz*dz+1e-4,f=rep*k*k/d2;
+    for(let i=0;i<n;i++){const ix=i*3,px=P[ix],py=P[ix+1],pz=P[ix+2];for(let j=i+1;j<n;j++){if(AD.has(i*n+j))continue;const jx=j*3,dx=px-P[jx],dy=py-P[jx+1],dz=pz-P[jx+2];const d2=dx*dx+dy*dy+dz*dz+1e-4,f=rep*k*k/d2;
       D[ix]+=dx*f;D[ix+1]+=dy*f;D[ix+2]+=dz*f;D[jx]-=dx*f;D[jx+1]-=dy*f;D[jx+2]-=dz*f}}
     for(const e of E){const a=e.ia*3,b=e.ib*3,dx=P[a]-P[b],dy=P[a+1]-P[b+1],dz=P[a+2]-P[b+2];const d=Math.sqrt(dx*dx+dy*dy+dz*dz)+1e-4,f=lf*e.w*Math.max(d-Lr,0)/k;
       D[a]-=dx*f;D[a+1]-=dy*f;D[a+2]-=dz*f;D[b]+=dx*f;D[b+1]+=dy*f;D[b+2]+=dz*f}
@@ -1046,9 +1046,9 @@ function simulate2(list,E,anchors,prev,gs){
   for(let i=0;i<n;i++){const pv=prev&&prev.get(list[i].id);if(pv){P[i*3]=pv[0];P[i*3+1]=pv[1];warm++}
     else{const r=rng(hash(list[i].id+'f')),a=anchors[i];P[i*3]=a[0]+(r()-.5)*.4;P[i*3+1]=a[1]+(r()-.5)*.4}}
   const k=Math.sqrt(3.4/Math.max(n,1))*.8,its=warm===n?90:warm>0?180:320;let temp=warm===n?.04:.2;const cool=Math.pow(.003/temp,1/its);
-  const D=new Float32Array(n*2),rep=Math.pow(gs.repel,1.6),lf=gs.linkForce,gf=gs.groupForce,Lr=Math.max(0,(gs.linkDist-.5)*k*.6),cf=gs.center*2.5;
+  const D=new Float32Array(n*2),rep=Math.pow(gs.repel,1.6),lf=Math.min(1,gs.linkForce),gf=gs.groupForce,Lr=Math.max(0,(gs.linkDist-.5)*k*.6),cf=gs.center*2.5,AD=new Set();E.forEach(e=>{AD.add(e.ia*n+e.ib);AD.add(e.ib*n+e.ia)});
   for(let it=0;it<its;it++){D.fill(0);
-    for(let i=0;i<n;i++){const px=P[i*3],py=P[i*3+1];for(let j=i+1;j<n;j++){const dx=px-P[j*3],dy=py-P[j*3+1],d2=dx*dx+dy*dy+1e-4,f=rep*k*k/d2;D[i*2]+=dx*f;D[i*2+1]+=dy*f;D[j*2]-=dx*f;D[j*2+1]-=dy*f}}
+    for(let i=0;i<n;i++){const px=P[i*3],py=P[i*3+1];for(let j=i+1;j<n;j++){if(AD.has(i*n+j))continue;const dx=px-P[j*3],dy=py-P[j*3+1],d2=dx*dx+dy*dy+1e-4,f=rep*k*k/d2;D[i*2]+=dx*f;D[i*2+1]+=dy*f;D[j*2]-=dx*f;D[j*2+1]-=dy*f}}
     for(const e of E){const a=e.ia,b=e.ib,dx=P[a*3]-P[b*3],dy=P[a*3+1]-P[b*3+1],d=Math.sqrt(dx*dx+dy*dy)+1e-4,f=lf*e.w*Math.max(d-Lr,0)/k;D[a*2]-=dx*f;D[a*2+1]-=dy*f;D[b*2]+=dx*f;D[b*2+1]+=dy*f}
     for(let i=0;i<n;i++){const a=anchors[i];D[i*2]+=(a[0]-P[i*3])*gf*k*.6-P[i*3]*k*cf;D[i*2+1]+=(a[1]-P[i*3+1])*gf*k*.6-P[i*3+1]*k*cf;
       const dl=Math.hypot(D[i*2],D[i*2+1])||1e-9,sc=Math.min(dl,temp)/dl;P[i*3]+=D[i*2]*sc;P[i*3+1]+=D[i*2+1]*sc}
@@ -1180,7 +1180,7 @@ function frame(now){requestAnimationFrame(frame);
   camDist+=(camTarget-camDist)*(1-Math.exp(-dt*5));camera.position.set(0,0,camDist);U.uNear.value=camDist-R*1.25;U.uFar.value=camDist+R*1.25;
   let morphing=false;{const km=1-Math.exp(-dt*2.4);for(let q=0;q<3;q++){const dw=WT[q]-W[q];if(Math.abs(dw)>.0008){W[q]+=dw*km;morphing=true}else W[q]=WT[q]}U.uW.value.set(W[0],W[1],W[2]);U.uDK.value=1-W[2]*.97;if(brainLines)brainLines.visible=W[1]>.004}
   const k3=1-Math.exp(-dt*3),k6=1-Math.exp(-dt*6),k8=1-Math.exp(-dt*8);
-  U.uLight.value+=((isLight?1:0)-U.uLight.value)*k3;U.uGlow.value+=(gs.glow-U.uGlow.value)*k6;U.uScale.value+=(gs.nodeSize-U.uScale.value)*k6;U.uOpacity.value+=(gs.linkOpacity-U.uOpacity.value)*k6;
+  U.uLight.value+=((isLight?1:0)-U.uLight.value)*k3;U.uGlow.value+=(gs.glow-U.uGlow.value)*k6;U.uScale.value+=(gs.nodeSize-U.uScale.value)*k6;U.uOpacity.value+=(gs.linkOpacity*Math.min(1,gs.linkForce)-U.uOpacity.value)*k6;
   {const t=gs.linkWidth,d=Math.max(0,t-1)*.5;U.uThin.value=Math.min(1,.25+t*.75);U.uRes.value.set(VW,VH);const O=[[d,0],[-d,0],[0,d],[0,-d]];for(let q=0;q<edgeX.length;q++){const x=edgeX[q];x.visible=t>1.04;x.material.uniforms.uOff.value.set(O[q][0],O[q][1])}}
   U.uAtmo.value+=(((gs.atmo&&gs.layout==='sphere')?1:0)-U.uAtmo.value)*k3;U.uShellA.value+=((gs.layout==='flat'?0:gs.layout==='brain'?1.3:1)*(isLight?.8:1)-U.uShellA.value)*k3;U.uStar.value+=(((S.settings.stars&&!isLight)?1:0)-U.uStar.value)*k3;
   const sc=U.uShellColor.value;sc.r+=(shellColorT[0]-sc.r)*k3;sc.g+=(shellColorT[1]-sc.g)*k3;sc.b+=(shellColorT[2]-sc.b)*k3;
@@ -1234,7 +1234,7 @@ function updatePulses(dt){if(!pulsePts)return;const gs=GS(),P=pulsePts.geometry.
     const E=G.E[p.e];edgePt(E.ia,E.ib,p.t,tA);
     P[i*3]=tA[0];P[i*3+1]=tA[1];P[i*3+2]=tA[2];
     const a=E.ia*3,b=E.ib*3;C[i*3]=Math.min(1,lerp(G.col[a],G.col[b],p.t)*1.15+.12);C[i*3+1]=Math.min(1,lerp(G.col[a+1],G.col[b+1],p.t)*1.15+.12);C[i*3+2]=Math.min(1,lerp(G.col[a+2],G.col[b+2],p.t)*1.15+.12);
-    Sz[i]=1.5;A[i]=Math.sin(Math.PI*p.t)*Math.min(1,G.ea[p.e])*.95*G.pulseVis*(E.w>=1?1:.5)}
+    Sz[i]=1.5;A[i]=Math.sin(Math.PI*p.t)*Math.min(1,G.ea[p.e])*.95*G.pulseVis*(E.w>=1?1:.5)*Math.min(1,gs.linkForce)}
   const g=pulsePts.geometry.attributes;g.position.needsUpdate=g.aColor.needsUpdate=g.aSize.needsUpdate=g.aAlpha.needsUpdate=true}
 function project(){if(!G.n)return;world.updateMatrixWorld();const mw=world.matrixWorld,vi=camera.matrixWorldInverse,pr=camera.projectionMatrix,w=VW,h=VH,nr=U.uNear.value,fr=U.uFar.value;
   for(let i=0;i<G.n;i++){vP.set(G.pos[i*3],G.pos[i*3+1],G.pos[i*3+2]).applyMatrix4(mw).applyMatrix4(vi);const dz=-vP.z;G.sd[i]=clamp((dz-nr)/(fr-nr),0,1)*U.uDK.value;vP.applyMatrix4(pr);G.sx[i]=(vP.x*.5+.5)*w;G.sy[i]=(-vP.y*.5+.5)*h}}
@@ -1634,7 +1634,7 @@ document.addEventListener('keydown',e=>{
 function init(){
   $$('[data-ic]').forEach(el=>el.insertAdjacentHTML('afterbegin',IC[el.dataset.ic]||''));
   const lg=$('#logoSrc').cloneNode(true);lg.removeAttribute('id');lg.setAttribute('class','logo');$('#about').innerHTML='';$('#about').appendChild(lg);
-  $('#about').insertAdjacentHTML('beforeend','<div><b>Neroline</b><span class="hint">Versiunea 1.1 · build 05.11-e · second brain 3D</span></div>');
+  $('#about').insertAdjacentHTML('beforeend','<div><b>Neroline</b><span class="hint">Versiunea 1.1 · build 05.11-f · second brain 3D</span></div>');
   applyTheme();syncSettingsUI();renderTree();renderFolderColors();renderCountdowns();measureHud();
   if(THREE_OK){try{initThree();applyTheme();initLabels();bindStage();buildGraph();requestAnimationFrame(t=>{lastT=t;frame(t)})}catch(err){console.error(err);THREE_OK=false}}
   try{document.fonts&&document.fonts.ready.then(()=>{measureHud()})}catch(e){}
