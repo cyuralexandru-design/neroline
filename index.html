@@ -531,9 +531,9 @@ input[type=range]:active::-webkit-slider-thumb{transform:scale(1.15)}
     </div></div></div></div>
     <div class="gsec open"><button class="gsec-h">Forțe<span class="chev" data-ic="chev"></span></button><div class="kids"><div class="inner"><div class="wrap">
       <label class="set-col"><span class="top">Forța centrală<output data-out="graph.center"></output></span><input type="range" min="0" max="1" step="0.01" data-set="graph.center" data-fmt="%"></label>
-      <label class="set-col"><span class="top">Forța de respingere<output data-out="graph.repel"></output></span><input type="range" min="0.2" max="3" step="0.05" data-set="graph.repel" data-fmt="x"></label>
+      <label class="set-col"><span class="top">Forța de respingere<output data-out="graph.repel"></output></span><input type="range" min="0" max="40" step="0.1" data-set="graph.repel" data-fmt="n"></label>
       <label class="set-col"><span class="top">Forța legăturilor<output data-out="graph.linkForce"></output></span><input type="range" min="0" max="1" step="0.01" data-set="graph.linkForce" data-fmt="%"></label>
-      <label class="set-col"><span class="top">Distanța legăturilor<output data-out="graph.linkDist"></output></span><input type="range" min="0.2" max="3" step="0.05" data-set="graph.linkDist" data-fmt="x"></label>
+      <label class="set-col"><span class="top">Distanța legăturilor<output data-out="graph.linkDist"></output></span><input type="range" min="0" max="1000" step="10" data-set="graph.linkDist" data-fmt="px"></label>
       <label class="set-col"><span class="top">Grupare pe foldere<output data-out="graph.groupForce"></output></span><input type="range" min="0" max="3" step="0.05" data-set="graph.groupForce" data-fmt="x"></label>
       <button class="btn wide" id="relayout" style="margin-top:6px">Rearanjează nodurile</button>
     </div></div></div></div>
@@ -719,13 +719,13 @@ const REP=[['none','Niciodată'],['daily','Zilnic'],['weekdays','În zilele lucr
 const ALR=[['none','Fără'],['0','La ora evenimentului'],['5','Cu 5 minute înainte'],['15','Cu 15 minute înainte'],['30','Cu 30 de minute înainte'],['60','Cu 1 oră înainte'],['1440','Cu 1 zi înainte']];
 function defaults(){return{folders:[],notes:[],events:[],countdowns:[],fired:{},ui:{open:{}},
   settings:{theme:'dark',accent:'#7fb6ff',stars:true,fog:false,fogColor:'#8a6ee6',
-   graph:{rotSpeed:1,idle:10,glow:1,nodeSize:1,linkOpacity:.6,labels:.45,pulses:true,orphans:true,folderLinks:true,repel:1,linkForce:1,groupForce:1,center:.2,linkDist:1,linkWidth:1,arrows:false,mono:false,monoColor:'#9fd2ff',layout:'sphere',atmo:true,filter:''}}}}
+   graph:{v:2,rotSpeed:1,idle:10,glow:1,nodeSize:1.97,linkOpacity:.6,labels:.45,pulses:true,orphans:true,folderLinks:true,repel:17.78,linkForce:.6,groupForce:1,center:.29,linkDist:500,linkWidth:1.65,arrows:false,mono:false,monoColor:'#9fd2ff',layout:'sphere',atmo:true,filter:''}}}}
 function normalize(d){const def=defaults();const o=Object.assign({},def,d);
   o.folders=Array.isArray(d.folders)?d.folders.filter(f=>f&&f.id):[];
   o.notes=Array.isArray(d.notes)?d.notes.filter(n=>n&&n.id).map(n=>Object.assign({},n,{title:String(n.title||'Fără titlu'),content:String(n.content||''),folderId:n.folderId||null})):[];
   o.events=Array.isArray(d.events)?d.events.filter(e=>e&&e.id&&e.date):[];
   o.countdowns=Array.isArray(d.countdowns)?d.countdowns.filter(c=>c&&c.id&&c.target):[];
-  o.settings=Object.assign({},def.settings,d.settings||{});o.settings.graph=Object.assign({},def.settings.graph,(d.settings||{}).graph||{});{const rg=(d.settings||{}).graph||{},gg=o.settings.graph;if(!['sphere','brain','flat'].includes(rg.layout))gg.layout=rg.brain?'brain':'sphere';delete gg.brain}
+  o.settings=Object.assign({},def.settings,d.settings||{});o.settings.graph=Object.assign({},def.settings.graph,(d.settings||{}).graph||{});{const rg=(d.settings||{}).graph||{},gg=o.settings.graph;if(!['sphere','brain','flat'].includes(rg.layout))gg.layout=rg.brain?'brain':'sphere';delete gg.brain;if(!gg.v){const dg=def.settings.graph;['repel','linkForce','center','linkDist','nodeSize','linkWidth'].forEach(k=>gg[k]=dg[k]);gg.v=2}}
   o.fired=d.fired&&typeof d.fired==='object'?d.fired:{};o.ui=Object.assign({open:{}},d.ui||{});o.ui.open=o.ui.open||{};return o}
 function load(){let d=null;try{const r=localStorage.getItem(KEY);if(r)d=JSON.parse(r)}catch(e){}
   if(!d||typeof d!=='object'){const def=defaults();seed(def);return def}return normalize(d)}
@@ -1050,7 +1050,7 @@ function simulate(list,E,anchors,prev,gs){
   for(let i=0;i<n;i++){const pv=prev&&prev.get(list[i].id);if(pv){P[i*3]=pv[0];P[i*3+1]=pv[1];P[i*3+2]=pv[2];warm++}
     else{const r=rng(hash(list[i].id)),a=anchors[i];const v=norm([a[0]+(r()-.5)*.5,a[1]+(r()-.5)*.5,a[2]+(r()-.5)*.5]);P[i*3]=v[0];P[i*3+1]=v[1];P[i*3+2]=v[2]}}
   const k=Math.sqrt(4*Math.PI/Math.max(n,1))*.75;const its=warm===n?80:warm>0?170:280;let temp=warm===n?.05:.18;const cool=Math.pow(.004/temp,1/its);
-  const D=new Float32Array(n*3),rep=Math.pow(gs.repel,1.6),lf=Math.min(1,gs.linkForce),gf=gs.groupForce,Lr=Math.max(0,(gs.linkDist-.5)*k*.6),AD=new Set();E.forEach(e=>{AD.add(e.ia*n+e.ib);AD.add(e.ib*n+e.ia)});
+  const D=new Float32Array(n*3),rep=Math.pow(gs.repel/10,1.6),lf=Math.min(1,gs.linkForce),gf=gs.groupForce,Lr=Math.max(0,(gs.linkDist/250-.5)*k*.6),AD=new Set();E.forEach(e=>{AD.add(e.ia*n+e.ib);AD.add(e.ib*n+e.ia)});
   for(let it=0;it<its;it++){D.fill(0);
     for(let i=0;i<n;i++){const ix=i*3,px=P[ix],py=P[ix+1],pz=P[ix+2];for(let j=i+1;j<n;j++){if(AD.has(i*n+j))continue;const jx=j*3,dx=px-P[jx],dy=py-P[jx+1],dz=pz-P[jx+2];const d2=dx*dx+dy*dy+dz*dz+1e-4,f=rep*k*k/d2;
       D[ix]+=dx*f;D[ix+1]+=dy*f;D[ix+2]+=dz*f;D[jx]-=dx*f;D[jx+1]-=dy*f;D[jx+2]-=dz*f}}
@@ -1070,7 +1070,7 @@ function simulate2(list,E,anchors,prev,gs){
   for(let i=0;i<n;i++){const pv=prev&&prev.get(list[i].id);if(pv){P[i*3]=pv[0];P[i*3+1]=pv[1];warm++}
     else{const r=rng(hash(list[i].id+'f')),a=anchors[i];P[i*3]=a[0]+(r()-.5)*.4;P[i*3+1]=a[1]+(r()-.5)*.4}}
   const k=Math.sqrt(3.4/Math.max(n,1))*.8,its=warm===n?90:warm>0?180:320;let temp=warm===n?.04:.2;const cool=Math.pow(.003/temp,1/its);
-  const D=new Float32Array(n*2),rep=Math.pow(gs.repel,1.6),lf=Math.min(1,gs.linkForce),gf=gs.groupForce,Lr=Math.max(0,(gs.linkDist-.5)*k*.6),cf=gs.center*2.5,AD=new Set();E.forEach(e=>{AD.add(e.ia*n+e.ib);AD.add(e.ib*n+e.ia)});
+  const D=new Float32Array(n*2),rep=Math.pow(gs.repel/10,1.6),lf=Math.min(1,gs.linkForce),gf=gs.groupForce,Lr=Math.max(0,(gs.linkDist/250-.5)*k*.6),cf=gs.center*2.5,AD=new Set();E.forEach(e=>{AD.add(e.ia*n+e.ib);AD.add(e.ib*n+e.ia)});
   for(let it=0;it<its;it++){D.fill(0);
     for(let i=0;i<n;i++){const px=P[i*3],py=P[i*3+1];for(let j=i+1;j<n;j++){if(AD.has(i*n+j))continue;const dx=px-P[j*3],dy=py-P[j*3+1],d2=dx*dx+dy*dy+1e-4,f=rep*k*k/d2;D[i*2]+=dx*f;D[i*2+1]+=dy*f;D[j*2]-=dx*f;D[j*2+1]-=dy*f}}
     for(const e of E){const a=e.ia,b=e.ib,dx=P[a*3]-P[b*3],dy=P[a*3+1]-P[b*3+1],d=Math.sqrt(dx*dx+dy*dy)+1e-4,f=lf*e.w*Math.max(d-Lr,0)/k;D[a*2]-=dx*f;D[a*2+1]-=dy*f;D[b*2]+=dx*f;D[b*2+1]+=dy*f}
@@ -1595,7 +1595,7 @@ document.addEventListener('click',e=>{const i=e.target.closest&&e.target.closest
 /* ================= setări ================= */
 const getPath=p=>p.split('.').reduce((o,k)=>o==null?o:o[k],S.settings);
 function setPath(p,v){const ks=p.split('.');let o=S.settings;for(let i=0;i<ks.length-1;i++)o=o[ks[i]];o[ks[ks.length-1]]=v;save();onSetting(p,v)}
-const fmt=(f,v)=>f==='%'?Math.round(v*100)+'%':f==='s'?Math.round(v)+' s':(+v).toFixed(2).replace(/0$/,'')+'×';
+const fmt=(f,v)=>f==='%'?Math.round(v*100)+'%':f==='n'?(+v).toFixed(1):f==='px'?Math.round(v)+' px':f==='s'?Math.round(v)+' s':(+v).toFixed(2).replace(/0$/,'')+'×';
 function rangeFill(i){const p=(i.value-i.min)/(i.max-i.min)*100;i.style.setProperty('--p',p+'%')}
 let relayT=0;
 function onSetting(p,v){switch(p){
