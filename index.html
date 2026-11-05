@@ -318,6 +318,11 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:17px;heigh
 input[type=range]::-moz-range-thumb{width:17px;height:17px;border:0;border-radius:50%;background:var(--fg);box-shadow:0 0 0 4px rgba(var(--accent-rgb),.2)}
 input[type=range]:active::-webkit-slider-thumb{transform:scale(1.15)}
 .mono-row{display:flex;align-items:center;gap:10px}
+.sub-h{display:flex;align-items:center;gap:6px;width:100%;padding:6px 0;background:none;border:0;color:var(--fg-2);font:500 13px var(--f-ui);cursor:pointer;text-align:left}
+.sub-h .cnt{margin-left:auto;font:400 11px var(--f-mono);color:var(--fg-3)}
+.tnode.open>.sub-h .chev{transform:rotate(90deg)}
+#fcKids>.inner{margin:0;padding:0;border:0}
+#fcKids .fcolors{max-height:min(320px,42vh);overflow:auto;padding:2px 0 4px;overscroll-behavior:contain}
 .fcolors{display:flex;flex-direction:column;gap:2px;transition:opacity .5s var(--ease)}
 .fcolors.dim{opacity:.4}
 .fc{display:flex;align-items:center;gap:6px;min-height:32px;font-size:13px;color:var(--fg-2);border-radius:9px}
@@ -512,8 +517,10 @@ input[type=range]:active::-webkit-slider-thumb{transform:scale(1.15)}
     <div class="gsec open"><button class="gsec-h">Grupuri<span class="chev" data-ic="chev"></span></button><div class="kids"><div class="inner"><div class="wrap">
       <div class="mono-row"><label class="ckrow" style="flex:1"><input type="checkbox" class="ck" data-set="graph.mono"><span>Mod mono</span></label><input type="color" data-set="graph.monoColor" aria-label="Culoare mono"></div>
       <p class="hint" id="monoHint">Când e bifat, toate nodurile folosesc o singură culoare. Debifat, revin culorile folderelor.</p>
-      <div class="lab" style="margin-top:6px">Culoarea fiecărui folder</div>
-      <div class="fcolors" id="folderColors"></div>
+      <div class="tnode" id="fcWrap">
+        <button type="button" class="sub-h" id="fcToggle" aria-expanded="false"><span class="chev" data-ic="chev"></span><span>Culorile folderelor</span><span class="cnt" id="fcCount"></span></button>
+        <div class="kids" id="fcKids"><div class="inner"><div class="fcolors" id="folderColors"></div></div></div>
+      </div>
     </div></div></div></div>
     <div class="gsec open"><button class="gsec-h">Afișare<span class="chev" data-ic="chev"></span></button><div class="kids"><div class="inner"><div class="wrap">
       <label class="set-row"><span>Săgeți<small>Arată sensul legăturii (de la notița care leagă spre cea legată)</small></span><input type="checkbox" class="switch" data-set="graph.arrows"></label>
@@ -1605,11 +1612,12 @@ function drawAccents(){const a=S.settings.accent.toLowerCase();const isPreset=AC
 $('#accentSw').addEventListener('click',e=>{const b=e.target.closest('[data-acc]');if(!b)return;S.settings.accent=b.dataset.acc;save();applyAccent();drawAccents()});
 $('#accentSw').addEventListener('input',e=>{if(e.target.id==='accCustom'){S.settings.accent=e.target.value;save();applyAccent()}});
 $('#accentSw').addEventListener('change',e=>{if(e.target.id==='accCustom')drawAccents()});
-function renderFolderColors(){S.ui.fcOpen=S.ui.fcOpen||{};
+function renderFolderColors(){S.ui.fcOpen=S.ui.fcOpen||{};{const w=$('#fcWrap'),o=!!S.ui.fcWrapOpen;w.classList.toggle('open',o);$('#fcToggle').setAttribute('aria-expanded',o);$('#fcCount').textContent=S.folders.length}
   const walk=pid=>S.folders.filter(f=>(f.parentId||null)===pid).sort(byName).map(f=>{const kids=S.folders.some(x=>x.parentId===f.id),open=S.ui.fcOpen[f.id]!==false;
     return `<div class="tnode${open?' open':''}"><div class="fc">${kids?`<button type="button" class="chev" data-fct="${f.id}" aria-label="Restrânge / extinde">${IC.chev}</button>`:'<span class="chev-sp"></span>'}<label class="fc-l"><input type="color" value="${esc(folderColorOf(f.id))}" data-fcolor="${f.id}" aria-label="Culoare ${esc(f.name)}"><span>${esc(f.name)}</span></label></div>${kids?`<div class="kids"><div class="inner">${walk(f.id)}</div></div>`:''}</div>`}).join('');
   const rows=[walk(null)];
   walk(null,0);$('#folderColors').innerHTML=rows.join('')||'<p class="hint">Niciun folder încă.</p>';monoUI()}
+$('#fcToggle').addEventListener('click',()=>{const w=$('#fcWrap'),o=!w.classList.contains('open');w.classList.toggle('open',o);$('#fcToggle').setAttribute('aria-expanded',o);S.ui.fcWrapOpen=o;save()});
 $('#folderColors').addEventListener('click',e=>{const b=e.target.closest('[data-fct]');if(!b)return;e.preventDefault();const id=b.dataset.fct,nd=b.closest('.tnode');S.ui.fcOpen=S.ui.fcOpen||{};const o=!nd.classList.contains('open');nd.classList.toggle('open',o);S.ui.fcOpen[id]=o;save()});
 $('#folderColors').addEventListener('input',e=>{const i=e.target.closest('[data-fcolor]');if(!i)return;const f=fById(i.dataset.fcolor);if(!f)return;f.color=i.value;save();G.colorsDirty=true;
   const fic=tree.querySelector(`.frow[data-fid="${f.id}"] .fic`);if(fic)fic.style.color=i.value});
@@ -1649,7 +1657,7 @@ document.addEventListener('keydown',e=>{
 function init(){
   $$('[data-ic]').forEach(el=>el.insertAdjacentHTML('afterbegin',IC[el.dataset.ic]||''));
   const lg=$('#logoSrc').cloneNode(true);lg.removeAttribute('id');lg.setAttribute('class','logo');$('#about').innerHTML='';$('#about').appendChild(lg);
-  $('#about').insertAdjacentHTML('beforeend','<div><b>Neroline</b><span class="hint">Versiunea 1.1 · build 05.11-i · second brain 3D</span></div>');
+  $('#about').insertAdjacentHTML('beforeend','<div><b>Neroline</b><span class="hint">Versiunea 1.1 · build 05.11-j · second brain 3D</span></div>');
   applyTheme();syncSettingsUI();renderTree();renderFolderColors();renderCountdowns();measureHud();
   if(THREE_OK){try{initThree();applyTheme();initLabels();bindStage();buildGraph();requestAnimationFrame(t=>{lastT=t;frame(t)})}catch(err){console.error(err);THREE_OK=false}}
   try{document.fonts&&document.fonts.ready.then(()=>{measureHud()})}catch(e){}
