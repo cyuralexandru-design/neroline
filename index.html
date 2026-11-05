@@ -71,6 +71,18 @@ svg[viewBox="0 0 24 24"]{width:20px;height:20px;fill:none;stroke:currentColor;st
 /* ---------- scena ---------- */
 .nebula{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:var(--neb);transition:opacity .9s var(--ease);
   background:radial-gradient(48% 42% at 50% 54%, rgba(var(--accent-rgb),.13), transparent 70%),radial-gradient(36% 30% at 82% 18%, rgba(167,139,250,.08), transparent 72%),radial-gradient(30% 26% at 14% 86%, rgba(95,227,192,.06), transparent 72%)}
+#fog,#sky{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+#fog{opacity:0;transition:opacity 1.4s var(--ease-io);overflow:hidden}#fog.on{opacity:1}
+#fog i{position:absolute;border-radius:50%;filter:blur(38px);will-change:transform}
+#fog i:nth-child(1){left:-28%;top:6%;width:92vmax;height:92vmax;max-width:760px;max-height:760px;background:radial-gradient(circle,rgba(var(--fog1),var(--fa)) 0,rgba(var(--fog1),0) 68%);animation:fgA 38s ease-in-out infinite alternate}
+#fog i:nth-child(2){right:-34%;top:38%;width:86vmax;height:86vmax;max-width:720px;max-height:720px;background:radial-gradient(circle,rgba(var(--fog2),calc(var(--fa)*.8)) 0,rgba(var(--fog2),0) 68%);animation:fgA 46s ease-in-out -12s infinite alternate-reverse}
+#fog i:nth-child(3){left:-20%;bottom:-24%;width:90vmax;height:70vmax;max-width:740px;max-height:600px;background:radial-gradient(circle,rgba(var(--fog3),calc(var(--fa)*.75)) 0,rgba(var(--fog3),0) 68%);animation:fgA 52s ease-in-out -20s infinite alternate}
+#fog b{position:absolute;right:-6%;top:8%;width:46vmin;height:46vmin;max-width:360px;max-height:360px;border-radius:50%;
+ background:conic-gradient(from 20deg,rgba(var(--fog1),0) 0deg,rgba(var(--fog1),calc(var(--fa)*1.1)) 60deg,rgba(var(--fog1),0) 120deg,rgba(var(--fog2),calc(var(--fa)*1.0)) 200deg,rgba(var(--fog1),0) 270deg,rgba(var(--fog1),calc(var(--fa)*.8)) 330deg,rgba(var(--fog1),0) 360deg);
+ -webkit-mask-image:radial-gradient(circle,#000 0,rgba(0,0,0,.6) 40%,transparent 72%);mask-image:radial-gradient(circle,#000 0,rgba(0,0,0,.6) 40%,transparent 72%);filter:blur(6px);animation:fgS 160s linear infinite}
+@keyframes fgA{from{transform:translate3d(0,0,0) scale(1)}to{transform:translate3d(6%,-5%,0) scale(1.12)}}
+@keyframes fgS{from{transform:rotate(-20deg) scaleY(.72)}to{transform:rotate(340deg) scaleY(.72)}}
+@media (prefers-reduced-motion:reduce){#fog i,#fog b{animation:none}}
 #stage{position:fixed;inset:0;width:100%;height:100%;z-index:1;touch-action:none;cursor:grab;display:block}
 #stage.dragging{cursor:grabbing}#stage.hover{cursor:pointer}
 #labels{position:fixed;inset:0;z-index:2;pointer-events:none;overflow:hidden}
@@ -430,6 +442,8 @@ input[type=range]:active::-webkit-slider-thumb{transform:scale(1.15)}
 <body>
 
 <div class="nebula" aria-hidden="true"></div>
+<div id="fog" aria-hidden="true"><i></i><i></i><i></i><b></b></div>
+<canvas id="sky" aria-hidden="true"></canvas>
 <canvas id="stage" aria-label="Second brain 3D"></canvas>
 <div id="labels" aria-hidden="true"></div>
 
@@ -480,11 +494,32 @@ input[type=range]:active::-webkit-slider-thumb{transform:scale(1.15)}
   <div class="ph"><span class="ph-ic" data-ic="graph"></span><h2>Second brain</h2><button class="ib" data-close="graph" data-ic="x" aria-label="Închide" title="Închide"></button></div>
   <div class="pscroll">
     <div class="gsec open"><button class="gsec-h">Filtre<span class="chev" data-ic="chev"></span></button><div class="kids"><div class="inner"><div class="wrap">
-      <label class="search" style="margin:0"><span data-ic="search"></span><input id="gFilter" data-set="graph.filter" type="search" placeholder="Filtrează nodurile" autocomplete="off"></label>
+      <label class="search" style="margin:0"><span data-ic="search"></span><input id="gFilter" data-set="graph.filter" type="search" placeholder="Caută în notițe" autocomplete="off"></label>
       <label class="set-row"><span>Notițe orfane<small>Notițele fără nicio legătură</small></span><input type="checkbox" class="switch" data-set="graph.orphans"></label>
       <label class="set-row"><span>Legături în același folder<small>Leagă discret notițele din același folder</small></span><input type="checkbox" class="switch" data-set="graph.folderLinks"></label>
     </div></div></div></div>
-    <div class="gsec open"><button class="gsec-h">Formă<span class="chev" data-ic="chev"></span></button><div class="kids"><div class="inner"><div class="wrap">
+    <div class="gsec open"><button class="gsec-h">Grupuri<span class="chev" data-ic="chev"></span></button><div class="kids"><div class="inner"><div class="wrap">
+      <div class="mono-row"><label class="ckrow" style="flex:1"><input type="checkbox" class="ck" data-set="graph.mono"><span>Mod mono</span></label><input type="color" data-set="graph.monoColor" aria-label="Culoare mono"></div>
+      <p class="hint" id="monoHint">Când e bifat, toate nodurile folosesc o singură culoare. Debifat, revin culorile folderelor.</p>
+      <div class="lab" style="margin-top:6px">Culoarea fiecărui folder</div>
+      <div class="fcolors" id="folderColors"></div>
+    </div></div></div></div>
+    <div class="gsec open"><button class="gsec-h">Afișare<span class="chev" data-ic="chev"></span></button><div class="kids"><div class="inner"><div class="wrap">
+      <label class="set-row"><span>Săgeți<small>Arată sensul legăturii (de la notița care leagă spre cea legată)</small></span><input type="checkbox" class="switch" data-set="graph.arrows"></label>
+      <label class="set-col"><span class="top">Prag de estompare a textului<output data-out="graph.labels"></output></span><input type="range" min="0" max="1" step="0.01" data-set="graph.labels" data-fmt="%"></label>
+      <label class="set-col"><span class="top">Dimensiunea nodurilor<output data-out="graph.nodeSize"></output></span><input type="range" min="0.4" max="2.4" step="0.05" data-set="graph.nodeSize" data-fmt="x"></label>
+      <label class="set-col"><span class="top">Grosimea legăturilor<output data-out="graph.linkWidth"></output></span><input type="range" min="0.4" max="4" step="0.05" data-set="graph.linkWidth" data-fmt="x"></label>
+      <button class="btn wide" id="animBtn" type="button" style="margin-top:6px">Animează</button>
+    </div></div></div></div>
+    <div class="gsec open"><button class="gsec-h">Forțe<span class="chev" data-ic="chev"></span></button><div class="kids"><div class="inner"><div class="wrap">
+      <label class="set-col"><span class="top">Forța centrală<output data-out="graph.center"></output></span><input type="range" min="0" max="1" step="0.01" data-set="graph.center" data-fmt="%"></label>
+      <label class="set-col"><span class="top">Forța de respingere<output data-out="graph.repel"></output></span><input type="range" min="0.2" max="3" step="0.05" data-set="graph.repel" data-fmt="x"></label>
+      <label class="set-col"><span class="top">Forța legăturilor<output data-out="graph.linkForce"></output></span><input type="range" min="0" max="3" step="0.05" data-set="graph.linkForce" data-fmt="x"></label>
+      <label class="set-col"><span class="top">Distanța legăturilor<output data-out="graph.linkDist"></output></span><input type="range" min="0.2" max="3" step="0.05" data-set="graph.linkDist" data-fmt="x"></label>
+      <label class="set-col"><span class="top">Grupare pe foldere<output data-out="graph.groupForce"></output></span><input type="range" min="0" max="3" step="0.05" data-set="graph.groupForce" data-fmt="x"></label>
+      <button class="btn wide" id="relayout" style="margin-top:6px">Rearanjează nodurile</button>
+    </div></div></div></div>
+    <div class="gsec"><button class="gsec-h">Formă<span class="chev" data-ic="chev"></span></button><div class="kids"><div class="inner"><div class="wrap">
       <div class="dd" id="shapeDD">
         <button class="dd-b" id="shapeBtn" type="button" aria-haspopup="listbox"><span class="dd-t" id="shapeName">Sferă</span><span class="chev" data-ic="chev"></span></button>
         <div class="dd-l"><div class="dd-in" id="shapeList" role="listbox">
@@ -495,28 +530,12 @@ input[type=range]:active::-webkit-slider-thumb{transform:scale(1.15)}
       </div>
       <label class="set-row"><span>Atmosferă<small>Halou în jurul sferei</small></span><input type="checkbox" class="switch" data-set="graph.atmo"></label>
     </div></div></div></div>
-    <div class="gsec open"><button class="gsec-h">Culori<span class="chev" data-ic="chev"></span></button><div class="kids"><div class="inner"><div class="wrap">
-      <div class="mono-row"><label class="ckrow" style="flex:1"><input type="checkbox" class="ck" data-set="graph.mono"><span>Mod mono</span></label><input type="color" data-set="graph.monoColor" aria-label="Culoare mono"></div>
-      <p class="hint" id="monoHint">Când e bifat, toate nodurile folosesc o singură culoare. Debifat, revin culorile folderelor.</p>
-      <div class="lab" style="margin-top:6px">Culorile folderelor</div>
-      <div class="fcolors" id="folderColors"></div>
-    </div></div></div></div>
-    <div class="gsec open"><button class="gsec-h">Afișare<span class="chev" data-ic="chev"></span></button><div class="kids"><div class="inner"><div class="wrap">
-      <label class="set-col"><span class="top">Dimensiune noduri<output data-out="graph.nodeSize"></output></span><input type="range" min="0.4" max="2.2" step="0.05" data-set="graph.nodeSize" data-fmt="x"></label>
+    <div class="gsec"><button class="gsec-h">Stil și mișcare<span class="chev" data-ic="chev"></span></button><div class="kids"><div class="inner"><div class="wrap">
       <label class="set-col"><span class="top">Opacitate legături<output data-out="graph.linkOpacity"></output></span><input type="range" min="0" max="1" step="0.01" data-set="graph.linkOpacity" data-fmt="%"></label>
-      <label class="set-col"><span class="top">Etichete<output data-out="graph.labels"></output></span><input type="range" min="0" max="1" step="0.01" data-set="graph.labels" data-fmt="%"></label>
       <label class="set-row"><span>Impulsuri pe legături</span><input type="checkbox" class="switch" data-set="graph.pulses"></label>
-    </div></div></div></div>
-    <div class="gsec open"><button class="gsec-h">Mișcare și glow<span class="chev" data-ic="chev"></span></button><div class="kids"><div class="inner"><div class="wrap">
-      <label class="set-col"><span class="top">Viteză rotație<output data-out="graph.rotSpeed"></output></span><input type="range" min="0" max="3" step="0.05" data-set="graph.rotSpeed" data-fmt="x"></label>
       <label class="set-col"><span class="top">Intensitate glow<output data-out="graph.glow"></output></span><input type="range" min="0" max="2" step="0.05" data-set="graph.glow" data-fmt="%"></label>
+      <label class="set-col"><span class="top">Viteză rotație<output data-out="graph.rotSpeed"></output></span><input type="range" min="0" max="3" step="0.05" data-set="graph.rotSpeed" data-fmt="x"></label>
       <label class="set-col"><span class="top">Pornește rotația după<output data-out="graph.idle"></output></span><input type="range" min="3" max="60" step="1" data-set="graph.idle" data-fmt="s"></label>
-    </div></div></div></div>
-    <div class="gsec"><button class="gsec-h">Forțe<span class="chev" data-ic="chev"></span></button><div class="kids"><div class="inner"><div class="wrap">
-      <label class="set-col"><span class="top">Respingere<output data-out="graph.repel"></output></span><input type="range" min="0.2" max="3" step="0.05" data-set="graph.repel" data-fmt="x"></label>
-      <label class="set-col"><span class="top">Forța legăturilor<output data-out="graph.linkForce"></output></span><input type="range" min="0" max="3" step="0.05" data-set="graph.linkForce" data-fmt="x"></label>
-      <label class="set-col"><span class="top">Grupare pe foldere<output data-out="graph.groupForce"></output></span><input type="range" min="0" max="3" step="0.05" data-set="graph.groupForce" data-fmt="x"></label>
-      <button class="btn wide" id="relayout" style="margin-top:6px">Rearanjează nodurile</button>
     </div></div></div></div>
   </div>
 </aside>
@@ -529,7 +548,9 @@ input[type=range]:active::-webkit-slider-thumb{transform:scale(1.15)}
       <div class="seg" id="themeSeg" role="group" aria-label="Temă"><button data-theme-opt="dark">Întunecat</button><button data-theme-opt="light">Luminos</button><button data-theme-opt="system">Sistem</button></div>
       <div class="lab">Culoare aplicație</div>
       <div class="swatches" id="accentSw"></div>
-      <label class="set-row"><span>Fundal cu stele</span><input type="checkbox" class="switch" data-set="stars"></label>
+      <label class="set-row"><span>Constelații<small>Stele și constelații în fundal</small></span><input type="checkbox" class="switch" data-set="stars"></label>
+      <div class="mono-row"><label class="ckrow" style="flex:1"><input type="checkbox" class="ck" data-set="fog"><span>Ceață și galaxii</span></label><input type="color" data-set="fogColor" aria-label="Culoare ceață"></div>
+      <p class="hint">Ceață fină și galaxii foarte transparente. Alegi tu culoarea.</p>
     </section>
     <section class="set-sec"><h3>Reamintiri</h3>
       <p class="hint" id="notifState"></p>
@@ -679,8 +700,8 @@ const EVC=['#ff6b6b','#ffb547','#5fe3c0','#7cc4ff','#a78bfa','#ff8fb1'];
 const REP=[['none','Niciodată'],['daily','Zilnic'],['weekdays','În zilele lucrătoare'],['weekly','Săptămânal'],['biweekly','La două săptămâni'],['monthly','Lunar'],['yearly','Anual']];
 const ALR=[['none','Fără'],['0','La ora evenimentului'],['5','Cu 5 minute înainte'],['15','Cu 15 minute înainte'],['30','Cu 30 de minute înainte'],['60','Cu 1 oră înainte'],['1440','Cu 1 zi înainte']];
 function defaults(){return{folders:[],notes:[],events:[],countdowns:[],fired:{},ui:{open:{}},
-  settings:{theme:'dark',accent:'#7fb6ff',stars:true,
-   graph:{rotSpeed:1,idle:10,glow:1,nodeSize:1,linkOpacity:.6,labels:.45,pulses:true,orphans:true,folderLinks:true,repel:1,linkForce:1,groupForce:1,mono:false,monoColor:'#9fd2ff',layout:'sphere',atmo:true,filter:''}}}}
+  settings:{theme:'dark',accent:'#7fb6ff',stars:true,fog:false,fogColor:'#8a6ee6',
+   graph:{rotSpeed:1,idle:10,glow:1,nodeSize:1,linkOpacity:.6,labels:.45,pulses:true,orphans:true,folderLinks:true,repel:1,linkForce:1,groupForce:1,center:.2,linkDist:1,linkWidth:1,arrows:false,mono:false,monoColor:'#9fd2ff',layout:'sphere',atmo:true,filter:''}}}}
 function normalize(d){const def=defaults();const o=Object.assign({},def,d);
   o.folders=Array.isArray(d.folders)?d.folders.filter(f=>f&&f.id):[];
   o.notes=Array.isArray(d.notes)?d.notes.filter(n=>n&&n.id).map(n=>Object.assign({},n,{title:String(n.title||'Fără titlu'),content:String(n.content||''),folderId:n.folderId||null})):[];
@@ -834,10 +855,28 @@ function applyAccent(){const a=S.settings.accent;const c=hexToRgb(a).map(v=>Math
   const lum=(.2126*c[0]+.7152*c[1]+.0722*c[2])/255;root.style.setProperty('--on-accent',lum>.5?'#071021':'#ffffff');
   root.style.setProperty('--accent-ink',isLight?mixHex(a,'#0b1022',.42):a);
   if(G.ready)G.colorsDirty=true}
+function applyFog(){const c=S.settings.fogColor||'#8a6ee6',on=!!S.settings.fog,rs=h=>hexToRgb(h).map(v=>Math.round(v*255)).join(',');
+  root.style.setProperty('--fog1',rs(c));root.style.setProperty('--fog2',rs(mixHex(c,'#ff7ad0',.38)));root.style.setProperty('--fog3',rs(mixHex(c,'#4aa8ff',.45)));
+  root.style.setProperty('--fa',isLight?'.34':'.24');const f=$('#fog');if(f)f.classList.toggle('on',on)}
+let skyData=null,skyDirty=true,skyA=0,skyL=-1;
+function skyBuild(){const r=rng(31415),cons=[],dust=[];
+  for(let c=0;c<20;c++){const cx=r(),cy=r(),n=4+Math.floor(r()*5),pts=[[cx,cy]];let a=r()*6.28;
+    for(let i=1;i<n;i++){a+=(r()-.5)*1.7;const st=.035+r()*.06,p=pts[pts.length-1];pts.push([p[0]+Math.cos(a)*st,p[1]+Math.sin(a)*st*1.4])}
+    const ln=[];for(let i=0;i<n-1;i++)ln.push([i,i+1]);if(n>5&&r()<.6){const f=1+Math.floor(r()*(n-3));ln.push([f,Math.min(n-1,f+2)])}
+    cons.push({pts,ln,w:.5+r()*.5})}
+  for(let i=0;i<260;i++)dust.push([r(),r(),r()]);skyData={cons,dust}}
+function skyDraw(){const c=$('#sky');if(!c||!skyData)return;const dpr=Math.min(devicePixelRatio||1,2),w=innerWidth,h=innerHeight;
+  if(c.width!==Math.round(w*dpr)||c.height!==Math.round(h*dpr)){c.width=Math.round(w*dpr);c.height=Math.round(h*dpr)}
+  const x=c.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);x.clearRect(0,0,w,h);skyL=U?U.uLight.value:0;skyDrawn=skyA;if(skyA<.01)return;
+  const L=skyL,rr=Math.round(215+(38-215)*L),gg=Math.round(225+(52-225)*L),bb=Math.round(255+(102-255)*L),col=a=>`rgba(${rr},${gg},${bb},${(a*skyA).toFixed(3)})`;
+  for(const d of skyData.dust){x.fillStyle=col(.14+d[2]*.34);x.beginPath();x.arc(d[0]*w,d[1]*h,.5+d[2]*1.1,0,6.283);x.fill()}
+  x.lineWidth=1;for(const k of skyData.cons){x.strokeStyle=col(.2*k.w+.06*L);x.beginPath();for(const l of k.ln){const p=k.pts[l[0]],q=k.pts[l[1]];x.moveTo(p[0]*w,p[1]*h);x.lineTo(q[0]*w,q[1]*h)}x.stroke();
+    for(const p of k.pts){x.fillStyle=col(.5*k.w+.12*L);x.beginPath();x.arc(p[0]*w,p[1]*h,1.15+k.w*.9,0,6.283);x.fill()}}}
+let skyDrawn=-1;
 function applyTheme(){const t=S.settings.theme;let dark;
   if(t==='system'){root.removeAttribute('data-theme');dark=!matchMedia('(prefers-color-scheme: light)').matches}
   else{root.setAttribute('data-theme',t);dark=t==='dark'}
-  isLight=!dark;applyAccent();const m=$('meta[name="theme-color"]');if(m)m.setAttribute('content',dark?'#060912':'#eef1f7');
+  isLight=!dark;applyAccent();applyFog();skyDirty=true;const m=$('meta[name="theme-color"]');if(m)m.setAttribute('content',dark?'#060912':'#eef1f7');
   if(mats.length){for(const mt of mats){if(mt===coreMat)continue;mt.blending=isLight?THREE.NormalBlending:THREE.AdditiveBlending;mt.needsUpdate=true}}
   $$('#themeSeg button').forEach(b=>b.classList.toggle('on',b.dataset.themeOpt===t))}
 try{matchMedia('(prefers-color-scheme: light)').addEventListener('change',()=>{if(S.settings.theme==='system')applyTheme()})}catch(e){}
@@ -887,10 +926,10 @@ const CORE_F=`uniform float uLight;varying vec3 vColor;varying float vAlpha;vary
 void main(){vec2 c=gl_PointCoord-0.5;float d=length(c)*2.0;float m=1.0-smoothstep(0.27,0.33,d);if(m<0.02)discard;
 vec3 lit=mix(vColor,vec3(1.0),0.28*(1.0-smoothstep(0.0,0.3,d)));vec3 bg=mix(vec3(0.03,0.05,0.10),vec3(0.94,0.96,1.0),uLight);
 vec3 col=mix(lit,bg,vDepth*0.62);gl_FragColor=vec4(col,m*vAlpha);}`;
-const EDGE_V=`attribute vec3 aColor;attribute float aAlpha;uniform float uNear,uFar,uFade,uDK;varying vec3 vColor;varying float vA;
-void main(){vec4 mv=modelViewMatrix*vec4(position,1.0);float dp=clamp((-mv.z-uNear)/max(uFar-uNear,0.001),0.0,1.0)*uDK;vColor=aColor;vA=aAlpha*uFade*mix(1.0,0.1,dp);gl_Position=projectionMatrix*mv;}`;
-const EDGE_F=`uniform float uOpacity,uLight,uGlow;varying vec3 vColor;varying float vA;
-void main(){gl_FragColor=vec4(mix(vColor,vColor*0.6,uLight),vA*uOpacity*(0.5+0.5*uGlow)*(1.0+0.4*uLight));}`;
+const EDGE_V=`attribute vec3 aColor;attribute float aAlpha;uniform float uNear,uFar,uFade,uDK;uniform vec2 uRes,uOff;varying vec3 vColor;varying float vA;
+void main(){vec4 mv=modelViewMatrix*vec4(position,1.0);float dp=clamp((-mv.z-uNear)/max(uFar-uNear,0.001),0.0,1.0)*uDK;vColor=aColor;vA=aAlpha*uFade*mix(1.0,0.1,dp);gl_Position=projectionMatrix*mv;gl_Position.xy+=uOff*2.0/uRes*gl_Position.w;}`;
+const EDGE_F=`uniform float uOpacity,uLight,uGlow,uThin;varying vec3 vColor;varying float vA;
+void main(){gl_FragColor=vec4(mix(vColor,vColor*0.6,uLight),vA*uOpacity*uThin*(0.5+0.5*uGlow)*(1.0+0.4*uLight));}`;
 const SHELL_V=`attribute vec3 aB;attribute vec3 aF;attribute float aR;uniform vec3 uW;uniform float uDK,uPR,uNear,uFar,uFade,uTime,uShellA;varying float vA;
 void main(){vec3 p=position*uW.x+aB*uW.y+aF*uW.z;vec4 mv=modelViewMatrix*vec4(p,1.0);float dz=max(-mv.z,0.01);float dp=clamp((dz-uNear)/max(uFar-uNear,0.001),0.0,1.0)*uDK;
 float tw=0.6+0.4*sin(uTime*0.9+aR*40.0);vA=uFade*uShellA*mix(0.55,0.05,dp)*tw;gl_PointSize=uPR*(1.1+aR*1.3)*(11.0/dz)*mix(1.0,0.7,dp);gl_Position=projectionMatrix*mv;}`;
@@ -908,7 +947,7 @@ void main(){vec4 mv=modelViewMatrix*vec4(position,1.0);float dp=clamp((-mv.z-uNe
 const BRAIN_F=`uniform vec3 uShellColor;uniform float uLight;varying float vA;
 void main(){gl_FragColor=vec4(mix(uShellColor,uShellColor*0.55,uLight),vA*(1.0+0.7*uLight)*1.5);}`;
 function mkMat(v,f,extra){const m=new THREE.ShaderMaterial(Object.assign({uniforms:U,vertexShader:v,fragmentShader:f,transparent:true,depthWrite:false,depthTest:false,blending:THREE.AdditiveBlending},extra||{}));mats.push(m);return m}
-let glowMat,edgeMat,shellMat,atmoMat,starMat;
+let glowMat,edgeMat,shellMat,atmoMat,starMat,edgeX=[],arrowLines=null;
 function buildBrainLines(){
   const pos=[],al=[],r=rng(11);
   const sp=d=>{const k=brainR(d[0],d[1],d[2])*R*.95*1.012;return[d[0]*k,d[1]*k,d[2]*k]};
@@ -940,7 +979,7 @@ function buildBrainLines(){
   const bg=new THREE.BufferGeometry();bg.setAttribute('position',new THREE.BufferAttribute(new Float32Array(pos),3));bg.setAttribute('aA',new THREE.BufferAttribute(new Float32Array(al),1));
   brainLines=new THREE.LineSegments(bg,brainMat);brainLines.frustumCulled=false;brainLines.renderOrder=2;world.add(brainLines)}
 function initThree(){
-  U={uW:{value:new THREE.Vector3(1,0,0)},uDK:{value:1},uScale:{value:1},uPR:{value:1},uNear:{value:5},uFar:{value:10},uFade:{value:0},uGlow:{value:1},uLight:{value:0},uTime:{value:0},uOpacity:{value:.6},
+  U={uW:{value:new THREE.Vector3(1,0,0)},uDK:{value:1},uScale:{value:1},uPR:{value:1},uNear:{value:5},uFar:{value:10},uFade:{value:0},uGlow:{value:1},uLight:{value:0},uTime:{value:0},uOpacity:{value:.6},uThin:{value:1},uRes:{value:new THREE.Vector2(1,1)},uOff:{value:new THREE.Vector2(0,0)},
      uShellColor:{value:new THREE.Color(S.settings.accent)},uShellA:{value:1},uAtmo:{value:1},uAtmoColor:{value:new THREE.Color(S.settings.accent)},uStar:{value:1}};
   renderer=new THREE.WebGLRenderer({canvas:$('#stage'),antialias:true,alpha:true,powerPreference:'high-performance'});
   renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));renderer.setClearColor(0x000000,0);
@@ -970,7 +1009,7 @@ function initThree(){
   resize(true);addEventListener('resize',()=>resize(false));try{new ResizeObserver(()=>resize(false)).observe($('#stage'))}catch(_){}
   G.ready=true;
 }
-function resize(first){const st=$('#stage');const w=st.clientWidth||innerWidth,h=st.clientHeight||innerHeight;VW=w;VH=h;measureHud();if(!renderer)return;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();
+function resize(first){skyDirty=true;const st=$('#stage');const w=st.clientWidth||innerWidth,h=st.clientHeight||innerHeight;VW=w;VH=h;measureHud();if(!renderer)return;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();
   const hv=20*Math.PI/180,mh=Math.min(hv,Math.atan(Math.tan(hv)*(w/h)));const nb=R*1.16/Math.sin(mh*.86);if(first){camDist=camTarget=nb}else if(Math.abs(camTarget-baseDist)<.05){camTarget=nb}baseDist=nb}
 function measureHud(){const h=$('#hudTop');if(h)root.style.setProperty('--hud-h',Math.round(h.getBoundingClientRect().height)+'px')}
 
@@ -987,11 +1026,11 @@ function simulate(list,E,anchors,prev,gs){
   for(let i=0;i<n;i++){const pv=prev&&prev.get(list[i].id);if(pv){P[i*3]=pv[0];P[i*3+1]=pv[1];P[i*3+2]=pv[2];warm++}
     else{const r=rng(hash(list[i].id)),a=anchors[i];const v=norm([a[0]+(r()-.5)*.5,a[1]+(r()-.5)*.5,a[2]+(r()-.5)*.5]);P[i*3]=v[0];P[i*3+1]=v[1];P[i*3+2]=v[2]}}
   const k=Math.sqrt(4*Math.PI/Math.max(n,1))*.75;const its=warm===n?80:warm>0?170:280;let temp=warm===n?.05:.18;const cool=Math.pow(.004/temp,1/its);
-  const D=new Float32Array(n*3),rep=gs.repel,lf=gs.linkForce,gf=gs.groupForce;
+  const D=new Float32Array(n*3),rep=Math.pow(gs.repel,1.6),lf=gs.linkForce,gf=gs.groupForce,Lr=Math.max(0,(gs.linkDist-.5)*k*.6);
   for(let it=0;it<its;it++){D.fill(0);
     for(let i=0;i<n;i++){const ix=i*3,px=P[ix],py=P[ix+1],pz=P[ix+2];for(let j=i+1;j<n;j++){const jx=j*3,dx=px-P[jx],dy=py-P[jx+1],dz=pz-P[jx+2];const d2=dx*dx+dy*dy+dz*dz+1e-4,f=rep*k*k/d2;
       D[ix]+=dx*f;D[ix+1]+=dy*f;D[ix+2]+=dz*f;D[jx]-=dx*f;D[jx+1]-=dy*f;D[jx+2]-=dz*f}}
-    for(const e of E){const a=e.ia*3,b=e.ib*3,dx=P[a]-P[b],dy=P[a+1]-P[b+1],dz=P[a+2]-P[b+2];const d=Math.sqrt(dx*dx+dy*dy+dz*dz)+1e-4,f=lf*e.w*d/k;
+    for(const e of E){const a=e.ia*3,b=e.ib*3,dx=P[a]-P[b],dy=P[a+1]-P[b+1],dz=P[a+2]-P[b+2];const d=Math.sqrt(dx*dx+dy*dy+dz*dz)+1e-4,f=lf*e.w*Math.max(d-Lr,0)/k;
       D[a]-=dx*f;D[a+1]-=dy*f;D[a+2]-=dz*f;D[b]+=dx*f;D[b+1]+=dy*f;D[b+2]+=dz*f}
     for(let i=0;i<n;i++){const ix=i*3,a=anchors[i];D[ix]+=(a[0]-P[ix])*gf*k*.9;D[ix+1]+=(a[1]-P[ix+1])*gf*k*.9;D[ix+2]+=(a[2]-P[ix+2])*gf*k*.9;
       const dl=Math.hypot(D[ix],D[ix+1],D[ix+2])||1e-9,s=Math.min(dl,temp)/dl;let x=P[ix]+D[ix]*s,y=P[ix+1]+D[ix+1]*s,z=P[ix+2]+D[ix+2]*s;const l=Math.hypot(x,y,z)||1;P[ix]=x/l;P[ix+1]=y/l;P[ix+2]=z/l}
@@ -1007,15 +1046,15 @@ function simulate2(list,E,anchors,prev,gs){
   for(let i=0;i<n;i++){const pv=prev&&prev.get(list[i].id);if(pv){P[i*3]=pv[0];P[i*3+1]=pv[1];warm++}
     else{const r=rng(hash(list[i].id+'f')),a=anchors[i];P[i*3]=a[0]+(r()-.5)*.4;P[i*3+1]=a[1]+(r()-.5)*.4}}
   const k=Math.sqrt(3.4/Math.max(n,1))*.8,its=warm===n?90:warm>0?180:320;let temp=warm===n?.04:.2;const cool=Math.pow(.003/temp,1/its);
-  const D=new Float32Array(n*2),rep=gs.repel,lf=gs.linkForce,gf=gs.groupForce;
+  const D=new Float32Array(n*2),rep=Math.pow(gs.repel,1.6),lf=gs.linkForce,gf=gs.groupForce,Lr=Math.max(0,(gs.linkDist-.5)*k*.6),cf=gs.center*2.5;
   for(let it=0;it<its;it++){D.fill(0);
     for(let i=0;i<n;i++){const px=P[i*3],py=P[i*3+1];for(let j=i+1;j<n;j++){const dx=px-P[j*3],dy=py-P[j*3+1],d2=dx*dx+dy*dy+1e-4,f=rep*k*k/d2;D[i*2]+=dx*f;D[i*2+1]+=dy*f;D[j*2]-=dx*f;D[j*2+1]-=dy*f}}
-    for(const e of E){const a=e.ia,b=e.ib,dx=P[a*3]-P[b*3],dy=P[a*3+1]-P[b*3+1],d=Math.sqrt(dx*dx+dy*dy)+1e-4,f=lf*e.w*d/k;D[a*2]-=dx*f;D[a*2+1]-=dy*f;D[b*2]+=dx*f;D[b*2+1]+=dy*f}
-    for(let i=0;i<n;i++){const a=anchors[i];D[i*2]+=(a[0]-P[i*3])*gf*k*.6-P[i*3]*k*.5;D[i*2+1]+=(a[1]-P[i*3+1])*gf*k*.6-P[i*3+1]*k*.5;
+    for(const e of E){const a=e.ia,b=e.ib,dx=P[a*3]-P[b*3],dy=P[a*3+1]-P[b*3+1],d=Math.sqrt(dx*dx+dy*dy)+1e-4,f=lf*e.w*Math.max(d-Lr,0)/k;D[a*2]-=dx*f;D[a*2+1]-=dy*f;D[b*2]+=dx*f;D[b*2+1]+=dy*f}
+    for(let i=0;i<n;i++){const a=anchors[i];D[i*2]+=(a[0]-P[i*3])*gf*k*.6-P[i*3]*k*cf;D[i*2+1]+=(a[1]-P[i*3+1])*gf*k*.6-P[i*3+1]*k*cf;
       const dl=Math.hypot(D[i*2],D[i*2+1])||1e-9,sc=Math.min(dl,temp)/dl;P[i*3]+=D[i*2]*sc;P[i*3+1]+=D[i*2+1]*sc}
     temp*=cool}
   let rm=0;for(let i=0;i<n;i++)rm=Math.max(rm,Math.hypot(P[i*3],P[i*3+1]));
-  const sc=n>=8&&rm>.05?.96/rm:(rm>1?1/rm:1);for(let i=0;i<n;i++){P[i*3]*=sc;P[i*3+1]*=sc;P[i*3+2]=0}
+  const sc=rm>.96?.96/rm:1;for(let i=0;i<n;i++){P[i*3]*=sc;P[i*3+1]*=sc;P[i*3+2]=0}
   return P}
 function buildGraph(o){o=o||{};if(!G.ready)return;const gs=GS();
   const tmap=new Map(S.notes.map(n=>[titleKey(n.title),n]));const keys=new Set(),raw=[],linked=new Set();
@@ -1029,8 +1068,9 @@ function buildGraph(o){o=o||{};if(!G.ready)return;const gs=GS();
   const deg=new Float32Array(n),adj=Array.from({length:n},()=>new Set());E.forEach(e=>{deg[e.ia]+=e.w;deg[e.ib]+=e.w;adj[e.ia].add(e.ib);adj[e.ib].add(e.ia)});
   const dS=equalizeSphere(simulate(list,E,computeAnchors(list,'sphere'),o.relayout?null:G.dirS,gs),n),dB=simulate(list,E,computeAnchors(list,'brain'),o.relayout?null:G.dirB,gs),dF=simulate2(list,E,computeAnchors(list,'flat'),o.relayout?null:G.dirF,gs);
   const tSp=new Float32Array(n*3),tBr=new Float32Array(n*3),tFl=new Float32Array(n*3),nDS=new Map(),nDB=new Map(),nDF=new Map();
-  for(let i=0;i<n;i++){const id=list[i].id,x=dS[i*3],y=dS[i*3+1],z=dS[i*3+2];nDS.set(id,[x,y,z]);tSp[i*3]=x*R;tSp[i*3+1]=y*R;tSp[i*3+2]=z*R;
-    const bx=dB[i*3],by=dB[i*3+1],bz=dB[i*3+2];nDB.set(id,[bx,by,bz]);const rb=brainR(bx,by,bz)*R*.95*1.035;tBr[i*3]=bx*rb;tBr[i*3+1]=by*rb;tBr[i*3+2]=bz*rb;const fx=dF[i*3],fy=dF[i*3+1];nDF.set(id,[fx,fy,0]);tFl[i*3]=fx*FLR;tFl[i*3+1]=fy*FLR;tFl[i*3+2]=0}
+  let mxd=0;for(let i=0;i<n;i++)mxd=Math.max(mxd,deg[i]);
+  for(let i=0;i<n;i++){const id=list[i].id,x=dS[i*3],y=dS[i*3+1],z=dS[i*3+2],sk=1-gs.center*.5*Math.pow(deg[i]/(mxd||1),.7);nDS.set(id,[x,y,z]);tSp[i*3]=x*R*sk;tSp[i*3+1]=y*R*sk;tSp[i*3+2]=z*R*sk;
+    const bx=dB[i*3],by=dB[i*3+1],bz=dB[i*3+2];nDB.set(id,[bx,by,bz]);const rb=brainR(bx,by,bz)*R*.95*1.035*sk;tBr[i*3]=bx*rb;tBr[i*3+1]=by*rb;tBr[i*3+2]=bz*rb;const fx=dF[i*3],fy=dF[i*3+1];nDF.set(id,[fx,fy,0]);tFl[i*3]=fx*FLR;tFl[i*3+1]=fy*FLR;tFl[i*3+2]=0}
   const cSp=new Float32Array(n*3),cBr=new Float32Array(n*3),cFl=new Float32Array(n*3),col=new Float32Array(n*3),alpha=new Float32Array(n),size=new Float32Array(n),base=new Float32Array(n);
   const mono=gs.mono?hexToRgb(gs.monoColor):null;
   for(let i=0;i<n;i++){const id=list[i].id,j=G.idx.get(id);base[i]=2.5+1.05*Math.sqrt(deg[i]);
@@ -1048,11 +1088,15 @@ function buildGraph(o){o=o||{};if(!G.ready)return;const gs=GS();
   g.setAttribute('aAlpha',new THREE.BufferAttribute(G.alpha,1).setUsage(THREE.DynamicDrawUsage));
   nodePts=new THREE.Points(g,haloMat);nodePts.frustumCulled=false;nodePts.renderOrder=3;world.add(nodePts);corePts=new THREE.Points(g,coreMat);corePts.frustumCulled=false;corePts.renderOrder=3.5;world.add(corePts);
   if(edgeLines){world.remove(edgeLines);edgeLines.geometry.dispose()}
+  edgeX.forEach(x=>{world.remove(x);const i=mats.indexOf(x.material);if(i>=0)mats.splice(i,1);x.material.dispose()});edgeX=[];if(arrowLines){world.remove(arrowLines);arrowLines.geometry.dispose();arrowLines=null}
   const nv=ne*SEG*2,eg=new THREE.BufferGeometry();
   eg.setAttribute('position',new THREE.BufferAttribute(new Float32Array(nv*3),3).setUsage(THREE.DynamicDrawUsage));
   eg.setAttribute('aColor',new THREE.BufferAttribute(new Float32Array(nv*3),3).setUsage(THREE.DynamicDrawUsage));
   eg.setAttribute('aAlpha',new THREE.BufferAttribute(new Float32Array(nv),1).setUsage(THREE.DynamicDrawUsage));
   edgeLines=new THREE.LineSegments(eg,edgeMat);edgeLines.frustumCulled=false;edgeLines.renderOrder=2;world.add(edgeLines);
+  for(let q=0;q<4;q++){const m=mkMat(EDGE_V,EDGE_F,{uniforms:Object.assign({},U,{uOff:{value:new THREE.Vector2()}})});if(isLight)m.blending=THREE.NormalBlending;const x=new THREE.LineSegments(eg,m);x.frustumCulled=false;x.renderOrder=2;x.visible=false;world.add(x);edgeX.push(x)}
+  {const ag=new THREE.BufferGeometry();ag.setAttribute('position',new THREE.BufferAttribute(new Float32Array(ne*4*3),3).setUsage(THREE.DynamicDrawUsage));ag.setAttribute('aColor',new THREE.BufferAttribute(new Float32Array(ne*4*3),3).setUsage(THREE.DynamicDrawUsage));ag.setAttribute('aAlpha',new THREE.BufferAttribute(new Float32Array(ne*4),1).setUsage(THREE.DynamicDrawUsage));
+   arrowLines=new THREE.LineSegments(ag,edgeMat);arrowLines.frustumCulled=false;arrowLines.renderOrder=2.2;arrowLines.visible=!!gs.arrows;world.add(arrowLines)}
   const strong=E.map((e,i)=>e.w>=1?i:-1).filter(i=>i>=0);
   G.pul=Array.from({length:PULSES},(_,i)=>({e:pickEdge(strong),t:Math.random(),sp:.14+Math.random()*.2}));G.strong=strong;
   writeEdgeColors();computeMatch();
@@ -1081,10 +1125,25 @@ function writeEdgePositions(){if(!edgeLines||!G.ne)return;const P=edgeLines.geom
   for(let e=0;e<G.ne;e++){const E=G.E[e];for(let s=0;s<=SEG;s++){edgePt(E.ia,E.ib,s/SEG,tE);
       linePts[s*3]=tE[0];linePts[s*3+1]=tE[1];linePts[s*3+2]=tE[2]}
     for(let s=0;s<SEG;s++){P[o++]=linePts[s*3];P[o++]=linePts[s*3+1];P[o++]=linePts[s*3+2];P[o++]=linePts[s*3+3];P[o++]=linePts[s*3+4];P[o++]=linePts[s*3+5]}}
-  edgeLines.geometry.attributes.position.needsUpdate=true}
+  edgeLines.geometry.attributes.position.needsUpdate=true;writeArrows()}
+const aP=[0,0,0],aQ=[0,0,0];
+function writeArrows(){if(!arrowLines||!G.ne)return;const gs=GS();arrowLines.visible=!!gs.arrows;if(!gs.arrows)return;const Pp=arrowLines.geometry.attributes.position.array;let o=0;const sz=.075+.03*gs.linkWidth,fl=W[2]>.5;
+  for(let e=0;e<G.ne;e++){const E=G.E[e];
+    if(E.w<1){for(let q=0;q<12;q++)Pp[o++]=0;continue}
+    edgePt(E.ia,E.ib,.9,aQ);edgePt(E.ia,E.ib,.8,aP);
+    let dx=aQ[0]-aP[0],dy=aQ[1]-aP[1],dz=aQ[2]-aP[2];const dl=Math.hypot(dx,dy,dz)||1;dx/=dl;dy/=dl;dz/=dl;
+    let ux,uy,uz;if(fl){ux=0;uy=0;uz=1}else{const l=Math.hypot(aQ[0],aQ[1],aQ[2])||1;ux=aQ[0]/l;uy=aQ[1]/l;uz=aQ[2]/l}
+    let px=dy*uz-dz*uy,py=dz*ux-dx*uz,pz=dx*uy-dy*ux;const pl=Math.hypot(px,py,pz)||1;px=px/pl*sz*.5;py=py/pl*sz*.5;pz=pz/pl*sz*.5;
+    const bx=aQ[0]-dx*sz,by=aQ[1]-dy*sz,bz=aQ[2]-dz*sz;
+    Pp[o++]=aQ[0];Pp[o++]=aQ[1];Pp[o++]=aQ[2];Pp[o++]=bx+px;Pp[o++]=by+py;Pp[o++]=bz+pz;
+    Pp[o++]=aQ[0];Pp[o++]=aQ[1];Pp[o++]=aQ[2];Pp[o++]=bx-px;Pp[o++]=by-py;Pp[o++]=bz-pz}
+  arrowLines.geometry.attributes.position.needsUpdate=true}
 function writeEdgeColors(){if(!edgeLines||!G.ne)return;const C=edgeLines.geometry.attributes.aColor.array,A=edgeLines.geometry.attributes.aAlpha.array;let o=0,q=0;
   for(let e=0;e<G.ne;e++){const E=G.E[e],a=E.ia*3,b=E.ib*3,al=G.ea[e];
     for(let s=0;s<SEG;s++)for(let h=0;h<2;h++){const t=(s+h)/SEG;C[o++]=lerp(G.col[a],G.col[b],t);C[o++]=lerp(G.col[a+1],G.col[b+1],t);C[o++]=lerp(G.col[a+2],G.col[b+2],t);A[q++]=al*(.35+.65*Math.sin(Math.PI*t))}}
+  if(arrowLines){const AC=arrowLines.geometry.attributes.aColor.array,AA=arrowLines.geometry.attributes.aAlpha.array;
+    for(let e=0;e<G.ne;e++){const E=G.E[e],b=E.ib*3;for(let v=0;v<4;v++){AC[(e*4+v)*3]=G.col[b];AC[(e*4+v)*3+1]=G.col[b+1];AC[(e*4+v)*3+2]=G.col[b+2];AA[e*4+v]=E.w>=1?Math.min(1.2,G.ea[e]*1.15+.1):0}}
+    arrowLines.geometry.attributes.aColor.needsUpdate=true;arrowLines.geometry.attributes.aAlpha.needsUpdate=true}
   edgeLines.geometry.attributes.aColor.needsUpdate=true;edgeLines.geometry.attributes.aAlpha.needsUpdate=true}
 function computeColorTargets(){const gs=GS(),mono=gs.mono?hexToRgb(gs.monoColor):null;
   for(let i=0;i<G.n;i++)G.tCol.set(mono||hexToRgb(folderColorOf(G.fids[i])),i*3);
@@ -1122,10 +1181,12 @@ function frame(now){requestAnimationFrame(frame);
   let morphing=false;{const km=1-Math.exp(-dt*2.4);for(let q=0;q<3;q++){const dw=WT[q]-W[q];if(Math.abs(dw)>.0008){W[q]+=dw*km;morphing=true}else W[q]=WT[q]}U.uW.value.set(W[0],W[1],W[2]);U.uDK.value=1-W[2]*.97;if(brainLines)brainLines.visible=W[1]>.004}
   const k3=1-Math.exp(-dt*3),k6=1-Math.exp(-dt*6),k8=1-Math.exp(-dt*8);
   U.uLight.value+=((isLight?1:0)-U.uLight.value)*k3;U.uGlow.value+=(gs.glow-U.uGlow.value)*k6;U.uScale.value+=(gs.nodeSize-U.uScale.value)*k6;U.uOpacity.value+=(gs.linkOpacity-U.uOpacity.value)*k6;
+  {const t=gs.linkWidth,d=Math.max(0,t-1)*.5;U.uThin.value=Math.min(1,.25+t*.75);U.uRes.value.set(VW,VH);const O=[[d,0],[-d,0],[0,d],[0,-d]];for(let q=0;q<edgeX.length;q++){const x=edgeX[q];x.visible=t>1.04;x.material.uniforms.uOff.value.set(O[q][0],O[q][1])}}
   U.uAtmo.value+=(((gs.atmo&&gs.layout==='sphere')?1:0)-U.uAtmo.value)*k3;U.uShellA.value+=((gs.layout==='flat'?0:gs.layout==='brain'?1.3:1)*(isLight?.8:1)-U.uShellA.value)*k3;U.uStar.value+=(((S.settings.stars&&!isLight)?1:0)-U.uStar.value)*k3;
   const sc=U.uShellColor.value;sc.r+=(shellColorT[0]-sc.r)*k3;sc.g+=(shellColorT[1]-sc.g)*k3;sc.b+=(shellColorT[2]-sc.b)*k3;
   const ac=U.uAtmoColor.value;ac.r+=(atmoColorT[0]-ac.r)*k3;ac.g+=(atmoColorT[1]-ac.g)*k3;ac.b+=(atmoColorT[2]-ac.b)*k3;
   starPts.rotation.y+=dt*.004;
+  {const tgt=S.settings.stars?1:0;skyA+=(tgt-skyA)*k3;if(Math.abs(skyA-tgt)<.004)skyA=tgt;if(!skyData)skyBuild();if(skyDirty||Math.abs(skyA-skyDrawn)>.003||Math.abs(U.uLight.value-skyL)>.004){skyDirty=false;skyDraw()}}
   // rotație: sfera liber pe toate axele; creierul doar pe axa verticală; 2D plat fără rotație
   const lay=gs.layout,flat=lay==='flat';
   const idle=now-lastInteract>gs.idle*1000&&!dragging&&!pinch&&!fly;
@@ -1511,9 +1572,12 @@ const fmt=(f,v)=>f==='%'?Math.round(v*100)+'%':f==='s'?Math.round(v)+' s':(+v).t
 function rangeFill(i){const p=(i.value-i.min)/(i.max-i.min)*100;i.style.setProperty('--p',p+'%')}
 let relayT=0;
 function onSetting(p,v){switch(p){
-  case'stars':break;
+  case'stars':skyDirty=true;break;
+  case'fog':case'fogColor':applyFog();break;
+  case'graph.arrows':G.forcePos=true;writeEdgeColors();break;
+  case'graph.center':case'graph.linkDist':clearTimeout(relayT);relayT=setTimeout(()=>buildGraph({relayout:true}),90);break;
   case'graph.orphans':case'graph.folderLinks':buildGraph();break;
-  case'graph.repel':case'graph.linkForce':case'graph.groupForce':clearTimeout(relayT);relayT=setTimeout(()=>buildGraph({relayout:true}),260);break;
+  case'graph.repel':case'graph.linkForce':case'graph.groupForce':clearTimeout(relayT);relayT=setTimeout(()=>buildGraph({relayout:true}),90);break;
   case'graph.layout':setLayout(v);interact();break;
   case'graph.mono':case'graph.monoColor':G.colorsDirty=true;monoUI();break;
   case'graph.filter':computeMatch();break}}
@@ -1523,6 +1587,7 @@ function syncSettingsUI(){$$('[data-set]').forEach(i=>{const v=getPath(i.dataset
   $$('#themeSeg button').forEach(b=>b.classList.toggle('on',b.dataset.themeOpt===S.settings.theme));drawAccents();syncNotifUI();monoUI();shapeUI()}
 document.addEventListener('input',e=>{const i=e.target.closest('[data-set]');if(!i)return;let v=i.type==='checkbox'?i.checked:i.type==='range'?parseFloat(i.value):i.value;
   if(i.type==='range'){rangeFill(i);const o=$(`[data-out="${i.dataset.set}"]`);if(o)o.textContent=fmt(i.dataset.fmt,v)}setPath(i.dataset.set,v)});
+$('#animBtn').addEventListener('click',()=>{if(!G.n)return;G.cSp.fill(0);G.cBr.fill(0);G.cFl.fill(0);G.alpha.fill(0);G.size.fill(0);G.ea.fill(0);G.forcePos=true;G.hover=-1;interact()});
 $('#themeSeg').addEventListener('click',e=>{const b=e.target.closest('[data-theme-opt]');if(!b)return;S.settings.theme=b.dataset.themeOpt;save();applyTheme()});
 function drawAccents(){const a=S.settings.accent.toLowerCase();const isPreset=ACCENTS.includes(a);
   $('#accentSw').innerHTML=ACCENTS.map(c=>`<button class="sw${c===a?' on':''}" data-acc="${c}" style="background:${c}" aria-label="Culoare ${c}"></button>`).join('')+`<label class="sw-custom${!isPreset?' sw on':''}" title="Culoare proprie"><span></span><input type="color" id="accCustom" value="${a}" aria-label="Culoare proprie"></label>`}
@@ -1569,7 +1634,7 @@ document.addEventListener('keydown',e=>{
 function init(){
   $$('[data-ic]').forEach(el=>el.insertAdjacentHTML('afterbegin',IC[el.dataset.ic]||''));
   const lg=$('#logoSrc').cloneNode(true);lg.removeAttribute('id');lg.setAttribute('class','logo');$('#about').innerHTML='';$('#about').appendChild(lg);
-  $('#about').insertAdjacentHTML('beforeend','<div><b>Neroline</b><span class="hint">Versiunea 1.1 · build 05.11-c · second brain 3D</span></div>');
+  $('#about').insertAdjacentHTML('beforeend','<div><b>Neroline</b><span class="hint">Versiunea 1.1 · build 05.11-d · second brain 3D</span></div>');
   applyTheme();syncSettingsUI();renderTree();renderFolderColors();renderCountdowns();measureHud();
   if(THREE_OK){try{initThree();applyTheme();initLabels();bindStage();buildGraph();requestAnimationFrame(t=>{lastT=t;frame(t)})}catch(err){console.error(err);THREE_OK=false}}
   try{document.fonts&&document.fonts.ready.then(()=>{measureHud()})}catch(e){}
@@ -1583,6 +1648,5 @@ function init(){
 init();
 })();
 </script>
-
 </body>
 </html>
