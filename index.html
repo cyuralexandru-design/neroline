@@ -904,6 +904,7 @@ let THREE_OK=typeof THREE!=='undefined';
 const R=2.2, SEG=18, PULSES=64, FLR=R*1.2, LAYS=['sphere','brain','flat'];
 let renderer,scene,camera,world,nodePts,edgeLines,shellPts,pulsePts,atmo,starPts;
 const mats=[];
+let dockT=[0,0],dockC=[0,0],viewOff=0;
 let U=null,camDist=7.6,camTarget=7.6,baseDist=7.6,W=[1,0,0],WT=[1,0,0],VW=innerWidth,VH=innerHeight,yaw=-.5,tilt=.3,tiltT=.3,pan={x:0,y:0},brainLines,haloMat,coreMat,brainMat,corePts;
 let lastInteract=-1e9,rotF=1,fly=null,dragging=false;
 const vel={x:0,y:0};
@@ -1028,7 +1029,12 @@ function initThree(){
   G.ready=true;
 }
 function resize(first){skyDirty=true;const st=$('#stage');const w=st.clientWidth||innerWidth,h=st.clientHeight||innerHeight;VW=w;VH=h;measureHud();if(!renderer)return;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();
-  const hv=20*Math.PI/180,mh=Math.min(hv,Math.atan(Math.tan(hv)*(w/h)));const nb=R*1.16/Math.sin(mh*.86);if(first){camDist=camTarget=nb}else if(Math.abs(camTarget-baseDist)<.05){camTarget=nb}baseDist=nb}
+  const hv=20*Math.PI/180,we=VW>=900?Math.max(360,w-dockT[0]-dockT[1]):w,mh=Math.min(hv,Math.atan(Math.tan(hv)*(we/h)));const nb=R*1.16/Math.sin(mh*.86);if(first){camDist=camTarget=nb}else if(Math.abs(camTarget-baseDist)<.05){camTarget=nb}baseDist=nb}
+function dockTargets(){if(VW<900)return[0,0];let L=0,Rr=0;
+  const op=id=>{const e=document.getElementById(id);return e&&e.classList.contains('open')?e:null};
+  for(const id of['notesPanel','graphPanel','editor']){const e=op(id);if(e)L=Math.max(L,e.offsetLeft+e.offsetWidth+16)}
+  {const e=op('setPanel');if(e)Rr=Math.max(0,VW-e.offsetLeft+16)}
+  return[L,Rr]}
 function measureHud(){const h=$('#hudTop');if(h)root.style.setProperty('--hud-h',Math.round(h.getBoundingClientRect().height)+'px')}
 
 function computeAnchors(list,mode){
@@ -1203,6 +1209,9 @@ function frame(now){requestAnimationFrame(frame);
   U.uAtmo.value+=(((gs.atmo&&gs.layout==='sphere')?1:0)-U.uAtmo.value)*k3;U.uShellA.value+=((gs.layout==='flat'?0:gs.layout==='brain'?1.3:1)*(isLight?.8:1)-U.uShellA.value)*k3;U.uStar.value+=(((S.settings.stars&&!isLight)?1:0)-U.uStar.value)*k3;
   const sc=U.uShellColor.value;sc.r+=(shellColorT[0]-sc.r)*k3;sc.g+=(shellColorT[1]-sc.g)*k3;sc.b+=(shellColorT[2]-sc.b)*k3;
   const ac=U.uAtmoColor.value;ac.r+=(atmoColorT[0]-ac.r)*k3;ac.g+=(atmoColorT[1]-ac.g)*k3;ac.b+=(atmoColorT[2]-ac.b)*k3;
+  {const t=dockTargets();if(Math.abs(t[0]-dockT[0])>1||Math.abs(t[1]-dockT[1])>1){dockT=t;resize(false)}
+   dockC[0]+=(dockT[0]-dockC[0])*k3;dockC[1]+=(dockT[1]-dockC[1])*k3;const sh=(dockC[0]-dockC[1])/2;
+   if(Math.abs(sh)>.3||viewOff){viewOff=Math.abs(sh)>.3?sh:0;if(viewOff)camera.setViewOffset(VW,VH,-viewOff,0,VW,VH);else camera.clearViewOffset()}}
   starPts.rotation.y+=dt*.004;
   {const tgt=S.settings.stars?1:0;skyA+=(tgt-skyA)*k3;if(Math.abs(skyA-tgt)<.004)skyA=tgt;if(!skyData)skyBuild();if(skyDirty||Math.abs(skyA-skyDrawn)>.003||Math.abs(U.uLight.value-skyL)>.004){skyDirty=false;skyDraw()}}
   // rotație: sfera liber pe toate axele; creierul doar pe axa verticală; 2D plat fără rotație
@@ -1657,7 +1666,7 @@ document.addEventListener('keydown',e=>{
 function init(){
   $$('[data-ic]').forEach(el=>el.insertAdjacentHTML('afterbegin',IC[el.dataset.ic]||''));
   const lg=$('#logoSrc').cloneNode(true);lg.removeAttribute('id');lg.setAttribute('class','logo');$('#about').innerHTML='';$('#about').appendChild(lg);
-  $('#about').insertAdjacentHTML('beforeend','<div><b>Neroline</b><span class="hint">Versiunea 1.1 · build 05.11-j · second brain 3D</span></div>');
+  $('#about').insertAdjacentHTML('beforeend','<div><b>Neroline</b><span class="hint">Versiunea 1.1 · build 05.11-k · second brain 3D</span></div>');
   applyTheme();syncSettingsUI();renderTree();renderFolderColors();renderCountdowns();measureHud();
   if(THREE_OK){try{initThree();applyTheme();initLabels();bindStage();buildGraph();requestAnimationFrame(t=>{lastT=t;frame(t)})}catch(err){console.error(err);THREE_OK=false}}
   try{document.fonts&&document.fonts.ready.then(()=>{measureHud()})}catch(e){}
