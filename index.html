@@ -154,7 +154,7 @@ body.ready .hud-bl{transition-delay:.15s}body.ready .hud-br{transition-delay:.25
 /* tree tip Registry Editor */
 .tree{flex:1;min-height:0;overflow:auto;padding:2px 8px 14px}
 .tree.drop-root{box-shadow:inset 0 0 0 1px rgba(var(--accent-rgb),.45);border-radius:12px}
-.row{display:flex;align-items:center;gap:6px;height:32px;padding:0 4px 0 4px;border-radius:9px;cursor:pointer;color:var(--fg-2);transition:background-color .3s var(--ease),color .3s var(--ease);user-select:none;-webkit-user-select:none}
+.row{position:relative;display:flex;align-items:center;gap:6px;height:32px;padding:0 6px 0 4px;border-radius:9px;cursor:pointer;color:var(--fg-2);transition:background-color .3s var(--ease),color .3s var(--ease);user-select:none;-webkit-user-select:none}
 .row:hover{background:var(--glass-hi);color:var(--fg)}
 .row.sel{background:rgba(var(--accent-rgb),.1);color:var(--fg)}
 .row.active{background:rgba(var(--accent-rgb),.16);color:var(--fg)}
@@ -169,12 +169,13 @@ body.ready .hud-bl{transition-delay:.15s}body.ready .hud-br{transition-delay:.25
 .fic svg{width:17px;height:17px}
 .row .name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13.5px}
 .row .name mark{background:rgba(var(--accent-rgb),.25);color:inherit;border-radius:3px;padding:0 1px}
-.row .cnt{font:400 11px var(--f-mono);color:var(--fg-3);font-variant-numeric:tabular-nums}
-.row .more{width:26px;height:26px;border-radius:7px;display:grid;place-items:center;opacity:0;color:var(--fg-3);transition:opacity .3s,background-color .3s}
+.row .cnt{flex:none;min-width:26px;text-align:right;font:400 11px var(--f-mono);color:var(--fg-3);font-variant-numeric:tabular-nums;transition:opacity .25s}
+.row:hover .cnt,.row.sel .cnt,.row.active .cnt{opacity:0}
+.row .more{position:absolute;right:4px;top:3px;width:26px;height:26px;border-radius:7px;display:grid;place-items:center;opacity:0;color:var(--fg-3);transition:opacity .3s,background-color .3s}
 .row .more svg{width:16px;height:16px}
 .row:hover .more,.row.sel .more,.row.active .more{opacity:1}
 .row .more:hover{background:var(--glass-hi);color:var(--fg)}
-@media (hover:none){.row .more{opacity:.7}}
+@media (hover:none){.row .more{opacity:.7}.row{padding-right:34px}.row .cnt{opacity:1!important;margin-right:2px}}
 .kids{display:grid;grid-template-rows:0fr;transition:grid-template-rows .6s var(--ease)}
 .tnode.open>.kids{grid-template-rows:1fr}
 .kids>.inner{overflow:hidden;min-height:0;margin-left:13px;padding-left:7px;border-left:1px solid var(--line)}
@@ -314,7 +315,12 @@ input[type=range]:active::-webkit-slider-thumb{transform:scale(1.15)}
 .mono-row{display:flex;align-items:center;gap:10px}
 .fcolors{display:flex;flex-direction:column;gap:2px;transition:opacity .5s var(--ease)}
 .fcolors.dim{opacity:.4}
-.fc{display:flex;align-items:center;gap:10px;min-height:32px;padding-left:calc(var(--dep,0) * 14px);font-size:13px;color:var(--fg-2)}
+.fc{display:flex;align-items:center;gap:6px;min-height:32px;font-size:13px;color:var(--fg-2);border-radius:9px}
+.fc:hover{background:var(--glass-hi)}
+.fc .fc-l{display:flex;align-items:center;gap:10px;flex:1;min-width:0;cursor:pointer}
+.fc .fc-l span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fc button.chev{border:0;background:none;padding:0;cursor:pointer}
+.tnode.open>.fc .chev{transform:rotate(90deg)}
 .btn{height:40px;padding:0 16px;border-radius:12px;background:var(--glass-hi);border:1px solid var(--line);color:var(--fg);font-size:13.5px;font-weight:500;display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:transform .35s var(--ease),border-color .35s,background-color .35s}
 .btn:hover{border-color:var(--line-strong)}.btn:active{transform:scale(.97)}
 .btn.primary{background:var(--accent);border-color:transparent;color:var(--on-accent)}
@@ -1594,8 +1600,12 @@ function drawAccents(){const a=S.settings.accent.toLowerCase();const isPreset=AC
 $('#accentSw').addEventListener('click',e=>{const b=e.target.closest('[data-acc]');if(!b)return;S.settings.accent=b.dataset.acc;save();applyAccent();drawAccents()});
 $('#accentSw').addEventListener('input',e=>{if(e.target.id==='accCustom'){S.settings.accent=e.target.value;save();applyAccent()}});
 $('#accentSw').addEventListener('change',e=>{if(e.target.id==='accCustom')drawAccents()});
-function renderFolderColors(){const rows=[];const walk=(pid,dep)=>S.folders.filter(f=>(f.parentId||null)===pid).sort(byName).forEach(f=>{rows.push(`<label class="fc" style="--dep:${dep}"><input type="color" value="${esc(folderColorOf(f.id))}" data-fcolor="${f.id}" aria-label="Culoare ${esc(f.name)}"><span>${esc(f.name)}</span></label>`);walk(f.id,dep+1)});
+function renderFolderColors(){S.ui.fcOpen=S.ui.fcOpen||{};
+  const walk=pid=>S.folders.filter(f=>(f.parentId||null)===pid).sort(byName).map(f=>{const kids=S.folders.some(x=>x.parentId===f.id),open=S.ui.fcOpen[f.id]!==false;
+    return `<div class="tnode${open?' open':''}"><div class="fc">${kids?`<button type="button" class="chev" data-fct="${f.id}" aria-label="Restrânge / extinde">${IC.chev}</button>`:'<span class="chev-sp"></span>'}<label class="fc-l"><input type="color" value="${esc(folderColorOf(f.id))}" data-fcolor="${f.id}" aria-label="Culoare ${esc(f.name)}"><span>${esc(f.name)}</span></label></div>${kids?`<div class="kids"><div class="inner">${walk(f.id)}</div></div>`:''}</div>`}).join('');
+  const rows=[walk(null)];
   walk(null,0);$('#folderColors').innerHTML=rows.join('')||'<p class="hint">Niciun folder încă.</p>';monoUI()}
+$('#folderColors').addEventListener('click',e=>{const b=e.target.closest('[data-fct]');if(!b)return;e.preventDefault();const id=b.dataset.fct,nd=b.closest('.tnode');S.ui.fcOpen=S.ui.fcOpen||{};const o=!nd.classList.contains('open');nd.classList.toggle('open',o);S.ui.fcOpen[id]=o;save()});
 $('#folderColors').addEventListener('input',e=>{const i=e.target.closest('[data-fcolor]');if(!i)return;const f=fById(i.dataset.fcolor);if(!f)return;f.color=i.value;save();G.colorsDirty=true;
   const fic=tree.querySelector(`.frow[data-fid="${f.id}"] .fic`);if(fic)fic.style.color=i.value});
 const shapeDD=$('#shapeDD');
@@ -1634,7 +1644,7 @@ document.addEventListener('keydown',e=>{
 function init(){
   $$('[data-ic]').forEach(el=>el.insertAdjacentHTML('afterbegin',IC[el.dataset.ic]||''));
   const lg=$('#logoSrc').cloneNode(true);lg.removeAttribute('id');lg.setAttribute('class','logo');$('#about').innerHTML='';$('#about').appendChild(lg);
-  $('#about').insertAdjacentHTML('beforeend','<div><b>Neroline</b><span class="hint">Versiunea 1.1 · build 05.11-g · second brain 3D</span></div>');
+  $('#about').insertAdjacentHTML('beforeend','<div><b>Neroline</b><span class="hint">Versiunea 1.1 · build 05.11-h · second brain 3D</span></div>');
   applyTheme();syncSettingsUI();renderTree();renderFolderColors();renderCountdowns();measureHud();
   if(THREE_OK){try{initThree();applyTheme();initLabels();bindStage();buildGraph();requestAnimationFrame(t=>{lastT=t;frame(t)})}catch(err){console.error(err);THREE_OK=false}}
   try{document.fonts&&document.fonts.ready.then(()=>{measureHud()})}catch(e){}
