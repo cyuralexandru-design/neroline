@@ -1555,7 +1555,7 @@ document.addEventListener('keydown',e=>{
 function init(){
   $$('[data-ic]').forEach(el=>el.insertAdjacentHTML('afterbegin',IC[el.dataset.ic]||''));
   const lg=$('#logoSrc').cloneNode(true);lg.removeAttribute('id');lg.setAttribute('class','logo');$('#about').innerHTML='';$('#about').appendChild(lg);
-  $('#about').insertAdjacentHTML('beforeend','<div><b>Neroline</b><span class="hint">Versiunea 1.0 · second brain 3D</span></div>');
+  $('#about').insertAdjacentHTML('beforeend','<div><b>Neroline</b><span class="hint">Versiunea 1.1 · build 05.11-b · second brain 3D</span></div>');
   applyTheme();syncSettingsUI();renderTree();renderFolderColors();renderCountdowns();measureHud();
   if(THREE_OK){try{initThree();applyTheme();initLabels();bindStage();buildGraph();requestAnimationFrame(t=>{lastT=t;frame(t)})}catch(err){console.error(err);THREE_OK=false}}
   try{document.fonts&&document.fonts.ready.then(()=>{measureHud()})}catch(e){}
