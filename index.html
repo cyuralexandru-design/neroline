@@ -920,12 +920,12 @@ vec3 lit=mix(vColor,vec3(1.0),core*0.5);vec3 col=mix(lit,vColor*0.68,uLight);
 float a=(core+halo*(1.0-0.55*uLight))*vAlpha*dim;gl_FragColor=vec4(col,a);}`;
 const HALO_F=`uniform float uGlow,uLight;varying vec3 vColor;varying float vAlpha;varying float vDepth;
 void main(){vec2 c=gl_PointCoord-0.5;float d=length(c)*2.0;if(d>1.0)discard;
-float halo=exp(-d*d*4.2)*0.9*uGlow;float dim=mix(1.0,0.2,vDepth);vec3 col=mix(vColor,vColor*0.68,uLight);
+float halo=smoothstep(0.24,0.33,d)*exp(-(d-0.3)*(d-0.3)*8.0)*0.95*uGlow;float dim=mix(1.0,0.2,vDepth);vec3 col=mix(vColor,vColor*0.68,uLight);
 gl_FragColor=vec4(col,halo*(1.0-0.55*uLight)*vAlpha*dim);}`;
 const CORE_F=`uniform float uLight;varying vec3 vColor;varying float vAlpha;varying float vDepth;
 void main(){vec2 c=gl_PointCoord-0.5;float d=length(c)*2.0;float m=1.0-smoothstep(0.27,0.33,d);if(m<0.02)discard;
-vec3 lit=mix(vColor,vec3(1.0),0.28*(1.0-smoothstep(0.0,0.3,d)));vec3 bg=mix(vec3(0.03,0.05,0.10),vec3(0.94,0.96,1.0),uLight);
-vec3 col=mix(lit,bg,vDepth*0.62);gl_FragColor=vec4(col,m*vAlpha);}`;
+vec3 bg=mix(vec3(0.03,0.05,0.10),vec3(0.94,0.96,1.0),uLight);
+vec3 col=mix(vColor,bg,vDepth*0.4);gl_FragColor=vec4(col,m*vAlpha);}`;
 const EDGE_V=`attribute vec3 aColor;attribute float aAlpha;uniform float uNear,uFar,uFade,uDK;uniform vec2 uRes,uOff;varying vec3 vColor;varying float vA;
 void main(){vec4 mv=modelViewMatrix*vec4(position,1.0);float dp=clamp((-mv.z-uNear)/max(uFar-uNear,0.001),0.0,1.0)*uDK;vColor=aColor;vA=aAlpha*uFade*mix(1.0,0.1,dp);gl_Position=projectionMatrix*mv;gl_Position.xy+=uOff*2.0/uRes*gl_Position.w;}`;
 const EDGE_F=`uniform float uOpacity,uLight,uGlow,uThin;varying vec3 vColor;varying float vA;
@@ -1634,7 +1634,7 @@ document.addEventListener('keydown',e=>{
 function init(){
   $$('[data-ic]').forEach(el=>el.insertAdjacentHTML('afterbegin',IC[el.dataset.ic]||''));
   const lg=$('#logoSrc').cloneNode(true);lg.removeAttribute('id');lg.setAttribute('class','logo');$('#about').innerHTML='';$('#about').appendChild(lg);
-  $('#about').insertAdjacentHTML('beforeend','<div><b>Neroline</b><span class="hint">Versiunea 1.1 · build 05.11-d · second brain 3D</span></div>');
+  $('#about').insertAdjacentHTML('beforeend','<div><b>Neroline</b><span class="hint">Versiunea 1.1 · build 05.11-e · second brain 3D</span></div>');
   applyTheme();syncSettingsUI();renderTree();renderFolderColors();renderCountdowns();measureHud();
   if(THREE_OK){try{initThree();applyTheme();initLabels();bindStage();buildGraph();requestAnimationFrame(t=>{lastT=t;frame(t)})}catch(err){console.error(err);THREE_OK=false}}
   try{document.fonts&&document.fonts.ready.then(()=>{measureHud()})}catch(e){}
