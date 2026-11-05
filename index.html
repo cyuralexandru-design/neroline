@@ -241,7 +241,12 @@ body.ready .hud-bl{transition-delay:.15s}body.ready .hud-br{transition-delay:.25
 .gsec:not(.open) .gsec-h .chev{transform:none}
 .gsec>.kids>.inner{border:0;margin:0;padding:0 16px}
 .gsec.open>.kids{grid-template-rows:1fr}
-.gsec>.kids>.inner>.wrap{padding-bottom:14px;display:flex;flex-direction:column;gap:6px}
+.gsec>.kids>.inner>.wrap{padding:2px 0 20px;display:flex;flex-direction:column;gap:16px}
+.gsec .wrap>.hint{margin-top:-8px}
+.gsec .wrap>.lab{margin:2px 0 -8px}
+.gsec .wrap>.fcolors{margin-top:-4px}
+.gsec .wrap>.btn{margin-top:0!important}
+.gsec .wrap>.search{margin:0!important}
 .dd-b{display:flex;align-items:center;gap:10px;width:100%;height:42px;padding:0 12px;border-radius:12px;background:var(--glass-hi);border:1px solid var(--line);color:var(--fg);font-size:14px;font-weight:500;text-align:left;transition:border-color .4s var(--ease)}
 .dd-b:hover,.dd.open .dd-b{border-color:var(--line-strong)}
 .dd-b .dd-t{flex:1}
@@ -1644,7 +1649,7 @@ document.addEventListener('keydown',e=>{
 function init(){
   $$('[data-ic]').forEach(el=>el.insertAdjacentHTML('afterbegin',IC[el.dataset.ic]||''));
   const lg=$('#logoSrc').cloneNode(true);lg.removeAttribute('id');lg.setAttribute('class','logo');$('#about').innerHTML='';$('#about').appendChild(lg);
-  $('#about').insertAdjacentHTML('beforeend','<div><b>Neroline</b><span class="hint">Versiunea 1.1 · build 05.11-h · second brain 3D</span></div>');
+  $('#about').insertAdjacentHTML('beforeend','<div><b>Neroline</b><span class="hint">Versiunea 1.1 · build 05.11-i · second brain 3D</span></div>');
   applyTheme();syncSettingsUI();renderTree();renderFolderColors();renderCountdowns();measureHud();
   if(THREE_OK){try{initThree();applyTheme();initLabels();bindStage();buildGraph();requestAnimationFrame(t=>{lastT=t;frame(t)})}catch(err){console.error(err);THREE_OK=false}}
   try{document.fonts&&document.fonts.ready.then(()=>{measureHud()})}catch(e){}
