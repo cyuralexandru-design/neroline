@@ -870,7 +870,7 @@ function skyDraw(){const c=$('#sky');if(!c||!skyData)return;const dpr=Math.min(d
   const x=c.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);x.clearRect(0,0,w,h);skyL=U?U.uLight.value:0;skyDrawn=skyA;if(skyA<.01)return;
   const L=skyL,rr=Math.round(215+(38-215)*L),gg=Math.round(225+(52-225)*L),bb=Math.round(255+(102-255)*L),col=a=>`rgba(${rr},${gg},${bb},${(a*skyA).toFixed(3)})`;
   for(const d of skyData.dust){x.fillStyle=col(.14+d[2]*.34);x.beginPath();x.arc(d[0]*w,d[1]*h,.5+d[2]*1.1,0,6.283);x.fill()}
-  x.lineWidth=1;for(const k of skyData.cons){x.strokeStyle=col(.2*k.w+.06*L);x.beginPath();for(const l of k.ln){const p=k.pts[l[0]],q=k.pts[l[1]];x.moveTo(p[0]*w,p[1]*h);x.lineTo(q[0]*w,q[1]*h)}x.stroke();
+  for(const k of skyData.cons){
     for(const p of k.pts){x.fillStyle=col(.5*k.w+.12*L);x.beginPath();x.arc(p[0]*w,p[1]*h,1.15+k.w*.9,0,6.283);x.fill()}}}
 let skyDrawn=-1;
 function applyTheme(){const t=S.settings.theme;let dark;
@@ -1634,7 +1634,7 @@ document.addEventListener('keydown',e=>{
 function init(){
   $$('[data-ic]').forEach(el=>el.insertAdjacentHTML('afterbegin',IC[el.dataset.ic]||''));
   const lg=$('#logoSrc').cloneNode(true);lg.removeAttribute('id');lg.setAttribute('class','logo');$('#about').innerHTML='';$('#about').appendChild(lg);
-  $('#about').insertAdjacentHTML('beforeend','<div><b>Neroline</b><span class="hint">Versiunea 1.1 · build 05.11-f · second brain 3D</span></div>');
+  $('#about').insertAdjacentHTML('beforeend','<div><b>Neroline</b><span class="hint">Versiunea 1.1 · build 05.11-g · second brain 3D</span></div>');
   applyTheme();syncSettingsUI();renderTree();renderFolderColors();renderCountdowns();measureHud();
   if(THREE_OK){try{initThree();applyTheme();initLabels();bindStage();buildGraph();requestAnimationFrame(t=>{lastT=t;frame(t)})}catch(err){console.error(err);THREE_OK=false}}
   try{document.fonts&&document.fonts.ready.then(()=>{measureHud()})}catch(e){}
