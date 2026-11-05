@@ -946,7 +946,7 @@ function initThree(){
   renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));renderer.setClearColor(0x000000,0);
   U.uPR.value=renderer.getPixelRatio();
   scene=new THREE.Scene();camera=new THREE.PerspectiveCamera(40,1,.1,400);
-  world=new THREE.Group();world.scale.setScalar(.78);scene.add(world);
+  world=new THREE.Group();world.quaternion.setFromEuler(new THREE.Euler(.32,-.5,0));world.scale.setScalar(.78);scene.add(world);
   glowMat=mkMat(GLOW_V,GLOW_F);haloMat=mkMat(GLOW_V,HALO_F);coreMat=mkMat(GLOW_V,CORE_F,{blending:THREE.NormalBlending,depthTest:true,depthWrite:true});brainMat=mkMat(BRAIN_V,BRAIN_F);edgeMat=mkMat(EDGE_V,EDGE_F);shellMat=mkMat(SHELL_V,SHELL_F);atmoMat=mkMat(ATMO_V,ATMO_F);starMat=mkMat(STAR_V,STAR_F);
   // înveliș de praf neural: dă forma globului / creierului
   const SC=2800,sp=new Float32Array(SC*3),sb=new Float32Array(SC*3),sf=new Float32Array(SC*3),sr=new Float32Array(SC),r=rng(7);
@@ -1096,15 +1096,21 @@ function computeMatch(){const q1=treeQuery.trim().toLowerCase(),q2=String(GS().f
 function interact(){lastInteract=performance.now()}
 
 const vP=THREE_OK?new THREE.Vector3():null,eul=THREE_OK?new THREE.Euler(0,0,0,'XYZ'):null;
-const TAU=Math.PI*2,wrapPI=a=>a-TAU*Math.round(a/TAU);
+const AX=THREE_OK?new THREE.Vector3(1,0,0):null,AY=THREE_OK?new THREE.Vector3(0,1,0):null,qT=THREE_OK?new THREE.Quaternion():null,qU=THREE_OK?new THREE.Quaternion():null,vF=THREE_OK?new THREE.Vector3():null,Q_ID=THREE_OK?new THREE.Quaternion():null;
+const TAU=Math.PI*2,wrapPI=a=>a-TAU*Math.round(a/TAU),BTILT=.3;
+function rotWorld(ay,ax){if(ay){qT.setFromAxisAngle(AY,ay);world.quaternion.premultiply(qT)}if(ax){qT.setFromAxisAngle(AX,ax);world.quaternion.premultiply(qT)}}
+function brainYaw(){vF.set(0,0,1).applyQuaternion(world.quaternion).applyAxisAngle(AX,-BTILT);return Math.atan2(vF.x,vF.z)}
 function isFlat(){return GS().layout==='flat'}
 function setLayout(v){const i=Math.max(0,LAYS.indexOf(v));WT=[0,0,0];WT[i]=1;if(G.ready){G.hover=-1}if(i!==2){pan.x=pan.y=0}shapeUI()}
 function shapeUI(){const v=GS().layout,nm={sphere:'Sferă',brain:'Creier',flat:'2D plat'},t=$('#shapeName');if(t)t.textContent=nm[v]||'Sferă';$$('#shapeList [data-shape]').forEach(b=>b.classList.toggle('on',b.dataset.shape===v))}
 function flyTo(id){if(!G.ready)return;const i=G.idx.get(id);if(i===undefined)return;
   let px=G.pos[i*3],py=G.pos[i*3+1],pz=G.pos[i*3+2];
   if(px*px+py*py+pz*pz<1e-6){px=G.tSp[i*3]*WT[0]+G.tBr[i*3]*WT[1]+G.tFl[i*3]*WT[2];py=G.tSp[i*3+1]*WT[0]+G.tBr[i*3+1]*WT[1]+G.tFl[i*3+1]*WT[2];pz=G.tSp[i*3+2]*WT[0]+G.tBr[i*3+2]*WT[1]}
-  if(isFlat()){const sc=world.scale.x;fly={flat:true,x0:pan.x,y0:pan.y,x1:-px*sc,y1:-py*sc,t:0}}
-  else{fly={flat:false,a0:yaw,a1:yaw+wrapPI(Math.atan2(-px,pz)-yaw),t:0}}
+  const L=GS().layout;
+  if(L==='flat'){const sc=world.scale.x;fly={kind:'flat',x0:pan.x,y0:pan.y,x1:-px*sc,y1:-py*sc,t:0}}
+  else if(L==='brain'){fly={kind:'yaw',q0:world.quaternion.clone(),d:wrapPI(Math.atan2(-px,pz)-brainYaw()),t:0}}
+  else{const p=new THREE.Vector3(px,py,pz).applyQuaternion(world.quaternion).normalize(),t=new THREE.Vector3(0,.18,1).normalize();
+    fly={kind:'free',q0:world.quaternion.clone(),q1:new THREE.Quaternion().setFromUnitVectors(p,t).multiply(world.quaternion),t:0}}
   vel.x=vel.y=0;camTarget=Math.min(camTarget,baseDist*.9);interact()}
 
 /* bucla principală */
@@ -1120,15 +1126,23 @@ function frame(now){requestAnimationFrame(frame);
   const sc=U.uShellColor.value;sc.r+=(shellColorT[0]-sc.r)*k3;sc.g+=(shellColorT[1]-sc.g)*k3;sc.b+=(shellColorT[2]-sc.b)*k3;
   const ac=U.uAtmoColor.value;ac.r+=(atmoColorT[0]-ac.r)*k3;ac.g+=(atmoColorT[1]-ac.g)*k3;ac.b+=(atmoColorT[2]-ac.b)*k3;
   starPts.rotation.y+=dt*.004;
-  // rotație: doar în jurul axei verticale, ca o planetă; în 2D plat nu se rotește
-  const flat=gs.layout==='flat';
+  // rotație: sfera liber pe toate axele; creierul doar pe axa verticală; 2D plat fără rotație
+  const lay=gs.layout,flat=lay==='flat';
   const idle=now-lastInteract>gs.idle*1000&&!dragging&&!pinch&&!fly;
   rotF+=((idle?1:0)-rotF)*(1-Math.exp(-dt*(idle?.75:7)));
-  tiltT=flat?0:.3;tilt+=(tiltT-tilt)*k3;
-  if(fly){fly.t=Math.min(1,fly.t+dt/1.6);const fe=easeIO(fly.t);if(fly.flat){pan.x=lerp(fly.x0,fly.x1,fe);pan.y=lerp(fly.y0,fly.y1,fe)}else yaw=lerp(fly.a0,fly.a1,fe);lastInteract=now;if(fly.t>=1)fly=null}
-  else if(flat){yaw+=(Math.round(yaw/TAU)*TAU-yaw)*k3;vel.y=0}
-  else{if(!dragging&&Math.abs(vel.y)>1e-4){yaw+=vel.y*dt;vel.y*=Math.exp(-dt*3.2)}yaw+=.075*gs.rotSpeed*rotF*dt}
-  eul.set(tilt,yaw,0);world.quaternion.setFromEuler(eul);world.position.set(pan.x*W[2],pan.y*W[2],0);
+  if(fly){fly.t=Math.min(1,fly.t+dt/1.6);const fe=easeIO(fly.t);
+    if(fly.kind==='flat'){pan.x=lerp(fly.x0,fly.x1,fe);pan.y=lerp(fly.y0,fly.y1,fe)}
+    else if(fly.kind==='yaw'){world.quaternion.copy(fly.q0).multiply(qT.setFromAxisAngle(AY,fly.d*fe))}
+    else world.quaternion.copy(fly.q0).slerp(fly.q1,fe);
+    lastInteract=now;if(fly.t>=1)fly=null}
+  else if(flat){world.quaternion.slerp(Q_ID,k3);vel.x=vel.y=0}
+  else if(lay==='brain'){
+    qU.setFromEuler(eul.set(BTILT,brainYaw(),0));world.quaternion.slerp(qU,k3);
+    if(!dragging&&Math.abs(vel.y)>1e-4){world.quaternion.multiply(qT.setFromAxisAngle(AY,vel.y*dt));vel.y*=Math.exp(-dt*3.2)}
+    vel.x=0;world.quaternion.multiply(qT.setFromAxisAngle(AY,.075*gs.rotSpeed*rotF*dt))}
+  else{if(!dragging&&(Math.abs(vel.x)+Math.abs(vel.y))>1e-4){rotWorld(vel.y*dt,vel.x*dt);const dec=Math.exp(-dt*3.2);vel.x*=dec;vel.y*=dec}
+    const a=.075*gs.rotSpeed*rotF*dt;if(a>0){qT.setFromAxisAngle(AY,a);world.quaternion.premultiply(qT)}}
+  world.quaternion.normalize();world.position.set(pan.x*W[2],pan.y*W[2],0);
   if(G.n||G.ne)updateGraph(dt,now,morphing,k8);else if(G.colorsDirty){computeColorTargets();G.colorsDirty=false}
   updatePulses(dt);
   renderer.render(scene,camera);
@@ -1188,8 +1202,8 @@ function bindStage(){const st=$('#stage');
     if(ptrs.has(e.pointerId))ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
     if(pinch&&ptrs.size===2){const [a,b]=[...ptrs.values()];const d=Math.hypot(a.x-b.x,a.y-b.y)||1;camTarget=clamp(pinch.z*pinch.d/d,3.4,40);interact();return}
     if(drag){const dx=e.clientX-drag.x,dy=e.clientY-drag.y;drag.x=e.clientX;drag.y=e.clientY;drag.moved+=Math.abs(dx)+Math.abs(dy);
-      const k=.0048*(camDist/7.6),ay=dx*k;if(isFlat()){const u=2*camDist*Math.tan(20*Math.PI/180)/VH;pan.x=clamp(pan.x+dx*u,-R*3,R*3);pan.y=clamp(pan.y-dy*u,-R*3,R*3)}else yaw+=ay;const dtm=Math.max(8,e.timeStamp-drag.ts)/1000;drag.ts=e.timeStamp;
-      vel.y=isFlat()?0:clamp(lerp(vel.y,ay/dtm,.5),-5,5);interact();if(G.hover>=0){G.hover=-1;st.classList.remove('hover')}}});
+      const k=.0048*(camDist/7.6),ay=dx*k,ax=dy*k,L=GS().layout;if(L==='flat'){const u=2*camDist*Math.tan(20*Math.PI/180)/VH;pan.x=clamp(pan.x+dx*u,-R*3,R*3);pan.y=clamp(pan.y-dy*u,-R*3,R*3)}else if(L==='brain'){world.quaternion.multiply(qT.setFromAxisAngle(AY,ay))}else rotWorld(ay,ax);const dtm=Math.max(8,e.timeStamp-drag.ts)/1000;drag.ts=e.timeStamp;
+      if(L==='flat'){vel.x=vel.y=0}else{vel.y=clamp(lerp(vel.y,ay/dtm,.5),-5,5);vel.x=L==='brain'?0:clamp(lerp(vel.x,ax/dtm,.5),-5,5)}interact();if(G.hover>=0){G.hover=-1;st.classList.remove('hover')}}});
   const up=e=>{ptrs.delete(e.pointerId);if(ptrs.size<2)pinch=null;
     if(drag){if(drag.moved<7){const i=pickAt(e.clientX,e.clientY,e.pointerType==='mouse'?16:26);if(i>=0)openNote(G.ids[i])}if(e.timeStamp-drag.ts>90){vel.x=vel.y=0}}
     drag=null;dragging=false;if(!ptrs.size)st.classList.remove('dragging');interact()};
@@ -1555,7 +1569,7 @@ document.addEventListener('keydown',e=>{
 function init(){
   $$('[data-ic]').forEach(el=>el.insertAdjacentHTML('afterbegin',IC[el.dataset.ic]||''));
   const lg=$('#logoSrc').cloneNode(true);lg.removeAttribute('id');lg.setAttribute('class','logo');$('#about').innerHTML='';$('#about').appendChild(lg);
-  $('#about').insertAdjacentHTML('beforeend','<div><b>Neroline</b><span class="hint">Versiunea 1.1 · build 05.11-b · second brain 3D</span></div>');
+  $('#about').insertAdjacentHTML('beforeend','<div><b>Neroline</b><span class="hint">Versiunea 1.1 · build 05.11-c · second brain 3D</span></div>');
   applyTheme();syncSettingsUI();renderTree();renderFolderColors();renderCountdowns();measureHud();
   if(THREE_OK){try{initThree();applyTheme();initLabels();bindStage();buildGraph();requestAnimationFrame(t=>{lastT=t;frame(t)})}catch(err){console.error(err);THREE_OK=false}}
   try{document.fonts&&document.fonts.ready.then(()=>{measureHud()})}catch(e){}
