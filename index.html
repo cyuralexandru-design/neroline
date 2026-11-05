@@ -1490,7 +1490,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&cp.el.classList.con
 document.addEventListener('click',e=>{const i=e.target.closest&&e.target.closest('input[type=color]');if(!i)return;e.preventDefault();e.stopPropagation();
   pickColor(i.value,hx=>{i.value=hx;i.dispatchEvent(new Event('input',{bubbles:true}));i.dispatchEvent(new Event('change',{bubbles:true}))})},true);
 
-/* ================= setări =================
+/* ================= setări ================= */
 const getPath=p=>p.split('.').reduce((o,k)=>o==null?o:o[k],S.settings);
 function setPath(p,v){const ks=p.split('.');let o=S.settings;for(let i=0;i<ks.length-1;i++)o=o[ks[i]];o[ks[ks.length-1]]=v;save();onSetting(p,v)}
 const fmt=(f,v)=>f==='%'?Math.round(v*100)+'%':f==='s'?Math.round(v)+' s':(+v).toFixed(2).replace(/0$/,'')+'×';
