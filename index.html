@@ -906,7 +906,7 @@ const R=2.2, SEG=18, PULSES=64, FLR=R*1.2, LAYS=['sphere','brain','flat'];
 let renderer,scene,camera,world,nodePts,edgeLines,shellPts,pulsePts,atmo,starPts;
 const mats=[];
 let dockT=[0,0],dockC=[0,0],viewOff=0;
-let U=null,camDist=7.6,camTarget=7.6,baseDist=7.6,W=[1,0,0],WT=[1,0,0],VW=innerWidth,VH=innerHeight,yaw=-.5,tilt=.3,tiltT=.3,pan={x:0,y:0},brainLines,haloMat,coreMat,brainMat,corePts;
+let U=null,camDist=7.6,camTarget=7.6,baseDist=7.6,W=[1,0,0],WT=[1,0,0],VW=innerWidth,VH=innerHeight,yaw=-.5,tilt=.3,tiltT=.3,pan={x:0,y:0},brainLines,treeLines,haloMat,coreMat,brainMat,corePts;
 let lastInteract=-1e9,rotF=1,fly=null,dragging=false;
 const vel={x:0,y:0};
 const G={ready:false,n:0,ne:0,ids:[],titles:[],fids:[],idx:new Map(),dirS:new Map(),dirB:new Map(),dirF:new Map(),hover:-1,match:null,colorsDirty:true,forcePos:true,
@@ -970,6 +970,17 @@ const BRAIN_F=`uniform vec3 uShellColor;uniform float uLight;varying float vA;
 void main(){gl_FragColor=vec4(mix(uShellColor,uShellColor*0.55,uLight),vA*(1.0+0.7*uLight)*1.5);}`;
 function mkMat(v,f,extra){const m=new THREE.ShaderMaterial(Object.assign({uniforms:U,vertexShader:v,fragmentShader:f,transparent:true,depthWrite:false,depthTest:false,blending:THREE.AdditiveBlending},extra||{}));mats.push(m);return m}
 let glowMat,edgeMat,shellMat,atmoMat,starMat,edgeX=[],arrowLines=null;
+function buildTreeLines(){
+  const pos=[],al=[],K=R*.95*.96*1.012,rc=h=>.8*(1-h)/2*K;
+  const poly=(pts,w)=>{for(let i=0;i<pts.length-1;i++){const a=pts[i],b=pts[i+1];pos.push(a[0],a[1],a[2],b[0],b[1],b[2]);al.push(w,w)}};
+  for(const h of[-.78,-.45,-.12,.2,.52,.8]){const pts=[],r=rc(h);for(let k=0;k<=72;k++){const t=k/72*Math.PI*2;pts.push([Math.cos(t)*r,h*K-.05*K*Math.abs(Math.sin(t*3)),Math.sin(t)*r])}poly(pts,.5)}
+  {const pts=[];for(let k=0;k<=160;k++){const f=k/160,h=-.95+1.85*f,t=f*Math.PI*2*4.5,r=rc(h);pts.push([Math.cos(t)*r,h*K,Math.sin(t)*r])}poly(pts,.85)}
+  for(let k=0;k<10;k++){const t=k/10*Math.PI*2;poly([[0,K,0],[Math.cos(t)*rc(-1),-K,Math.sin(t)*rc(-1)]],.28)}
+  {const pts=[];for(let k=0;k<=72;k++){const t=k/72*Math.PI*2;pts.push([Math.cos(t)*rc(-1),-K,Math.sin(t)*rc(-1)])}poly(pts,.45)}
+  {const w=.13*K,y0=-K,y1=-K*1.2;poly([[-w,y0,0],[-w,y1,0],[w,y1,0],[w,y0,0]],.6);poly([[0,y0,-w],[0,y1,-w],[0,y1,w],[0,y0,w]],.4)}
+  {const pts=[];for(let k=0;k<=10;k++){const a=Math.PI/2+k*Math.PI*.8,rr=k%2?.045*K:.11*K;pts.push([Math.cos(a)*rr,K*1.1+Math.sin(a)*rr,0])}poly(pts,1)}
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(new Float32Array(pos),3));g.setAttribute('aA',new THREE.BufferAttribute(new Float32Array(al),1));
+  treeLines=new THREE.LineSegments(g,brainMat);treeLines.frustumCulled=false;treeLines.renderOrder=2;treeLines.visible=false;world.add(treeLines)}
 function buildBrainLines(){
   const pos=[],al=[],r=rng(11);
   const sp=d=>{const k=brainR(d[0],d[1],d[2])*R*.95*1.012;return[d[0]*k,d[1]*k,d[2]*k]};
@@ -1015,7 +1026,7 @@ function initThree(){
     const rs=R*(1+(r()-.5)*.014);sp[i*3]=x*rs;sp[i*3+1]=y*rs;sp[i*3+2]=z*rs;
     const rb=brainR(x,y,z)*R*.95*(1+(r()-.5)*.012);sb[i*3]=x*rb;sb[i*3+1]=y*rb;sb[i*3+2]=z*rb;sf[i*3]=x*FLR;sf[i*3+1]=y*FLR;sf[i*3+2]=0;sr[i]=r()}
   const sg=new THREE.BufferGeometry();sg.setAttribute('position',new THREE.BufferAttribute(sp,3));sg.setAttribute('aB',new THREE.BufferAttribute(sb,3));sg.setAttribute('aF',new THREE.BufferAttribute(sf,3));sg.setAttribute('aR',new THREE.BufferAttribute(sr,1));
-  shellPts=new THREE.Points(sg,shellMat);shellPts.frustumCulled=false;shellPts.renderOrder=0;world.add(shellPts);buildBrainLines();
+  shellPts=new THREE.Points(sg,shellMat);shellPts.frustumCulled=false;shellPts.renderOrder=0;world.add(shellPts);buildBrainLines();buildTreeLines();
   atmo=new THREE.Mesh(new THREE.SphereGeometry(R*1.035,72,54),atmoMat);atmo.renderOrder=1;world.add(atmo);
   const STN=1500,stp=new Float32Array(STN*3),str=new Float32Array(STN);
   for(let i=0;i<STN;i++){const d=norm([r()-.5,r()-.5,r()-.5]),rad=40+r()*60;stp[i*3]=d[0]*rad;stp[i*3+1]=d[1]*rad;stp[i*3+2]=d[2]*rad;str[i]=r()}
@@ -1205,7 +1216,7 @@ function frame(now){requestAnimationFrame(frame);
   const dt=Math.min(.05,Math.max(0,(now-lastT)/1000));lastT=now;const gs=GS();U.uTime.value+=dt;
   if(reveal.on&&reveal.t<1){reveal.t=Math.min(1,reveal.t+dt/2.3);const e=easeOut(reveal.t);U.uFade.value=e;world.scale.setScalar(.78+.22*e)}
   camDist+=(camTarget-camDist)*(1-Math.exp(-dt*5));camera.position.set(0,0,camDist);U.uNear.value=camDist-R*1.25;U.uFar.value=camDist+R*1.25;
-  let morphing=false;{const km=1-Math.exp(-dt*2.4);for(let q=0;q<3;q++){const dw=WT[q]-W[q];if(Math.abs(dw)>.0008){W[q]+=dw*km;morphing=true}else W[q]=WT[q]}U.uW.value.set(W[0],W[1],W[2]);U.uDK.value=1-W[2]*.97;if(brainLines)brainLines.visible=W[1]>.004&&!TREE}
+  let morphing=false;{const km=1-Math.exp(-dt*2.4);for(let q=0;q<3;q++){const dw=WT[q]-W[q];if(Math.abs(dw)>.0008){W[q]+=dw*km;morphing=true}else W[q]=WT[q]}U.uW.value.set(W[0],W[1],W[2]);U.uDK.value=1-W[2]*.97;if(brainLines)brainLines.visible=W[1]>.004&&!TREE;if(treeLines)treeLines.visible=W[1]>.004&&TREE}
   const k3=1-Math.exp(-dt*3),k6=1-Math.exp(-dt*6),k8=1-Math.exp(-dt*8);
   U.uLight.value+=((isLight?1:0)-U.uLight.value)*k3;U.uGlow.value+=(gs.glow-U.uGlow.value)*k6;U.uScale.value+=(gs.nodeSize-U.uScale.value)*k6;U.uOpacity.value+=(gs.linkOpacity*Math.min(1,gs.linkForce)-U.uOpacity.value)*k6;
   {const t=gs.linkWidth,d=Math.max(0,t-1)*.5;U.uThin.value=Math.min(1,.25+t*.75);U.uRes.value.set(VW,VH);const O=[[d,0],[-d,0],[0,d],[0,-d]];for(let q=0;q<edgeX.length;q++){const x=edgeX[q];x.visible=t>1.04;x.material.uniforms.uOff.value.set(O[q][0],O[q][1])}}
@@ -1669,7 +1680,7 @@ document.addEventListener('keydown',e=>{
 function init(){
   $$('[data-ic]').forEach(el=>el.insertAdjacentHTML('afterbegin',IC[el.dataset.ic]||''));
   const lg=$('#logoSrc').cloneNode(true);lg.removeAttribute('id');lg.setAttribute('class','logo');$('#about').innerHTML='';$('#about').appendChild(lg);
-  $('#about').insertAdjacentHTML('beforeend','<div><b>Neroline</b><span class="hint">Versiunea 1.1 · build 07.11-a · second brain 3D</span></div>');
+  $('#about').insertAdjacentHTML('beforeend','<div><b>Neroline</b><span class="hint">Versiunea 1.1 · build 07.11-b · second brain 3D</span></div>');
   applyTheme();syncSettingsUI();renderTree();renderFolderColors();renderCountdowns();measureHud();
   if(THREE_OK){try{initThree();applyTheme();initLabels();bindStage();buildGraph();requestAnimationFrame(t=>{lastT=t;frame(t)})}catch(err){console.error(err);THREE_OK=false}}
   try{document.fonts&&document.fonts.ready.then(()=>{measureHud()})}catch(e){}
